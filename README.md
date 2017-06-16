@@ -1,3 +1,6 @@
+This is a frame-semantic parser for automatically detecting semantic frames and their arguments, with the respective labels, from text.
+
+
 # Preprocessing FrameNet XML files
 
 First, create a data/ directory here, download FrameNet 1.x and place it under data/ Now, create the train, test and dev splits from the data by rewriting the xml files provided in CoNLL 2009 format, with BIOS tags, for simplicity.
