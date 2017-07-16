@@ -6,14 +6,14 @@ Frame-semantic parser for automatically detecting semantic frames and their argu
  * [Boost](http://www.boost.org/) libraries
  * [Eigen](http://eigen.tuxfamily.org) (newer versions strongly recommended)
  * [CMake](http://www.cmake.org/)
- * This runs with `DyNet-v2`
+ * This runs with the Python wrapper to `DyNet-v2`.
 
 #### Linking with DyNet
 Create a dynet-base/ directory here. Follow the [python installation directions](http://dynet.readthedocs.io/en/latest/python.html) to set up DyNet.
 
 #### Preprocessing FrameNet XML files
 
-First, create a data/ directory here, download FrameNet 1.x and place it under data/ Now, create the train, test and dev splits from the data by rewriting the xml files provided in CoNLL 2009 format, with BIOS tags, for simplicity, by executing the following:
+First, create a data/ directory here, download FrameNet version 1.x and place it under data/fndata-1.x/. Also create a directory data/neural/fn1.x/ for the data files in CoNLL 2009 format, which will be generated in the steps below. Now, create the train, test and dev splits from the data by rewriting the xml files provided in CoNLL 2009 format, with BIOS tags, for simplicity, by executing the following:
 
 ```python
 cd src/
@@ -23,6 +23,19 @@ python preprocess.py 2> err
 The above script writes the train, dev and test files in the required format into the data/ folder.
 
 There is plenty of noise in the data, and all the sentences which could not be converted. The location of these, along with the error is written to the standard error.
+
+### Frame Identification
+To run the biLSTM frame identification module, execute:
+
+```python
+cd src/
+python frameid.py \
+  --mode test \
+
+
+```
+
+
 
 #### Arg Identification
 
