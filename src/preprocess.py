@@ -308,13 +308,14 @@ def process_exemplars(dev_annos, test_annos):
         sys.stdout.write(s + ":\t" + str(sizes[s]) + "\n")
     sys.stdout.write("\n")
 
-def preprocess_wvf():
+def preprocess_wvf(ws):
     """
     read the train, dev and test files, along with the word vectors to find which words to retain vectors for.
     :return:
     """
+    sys.stdout.write("Reading FrameNet vocabulary...\n")
     reqdtoks = set([])
-    corpora = [DEV_CONLL, TRAIN_CONLL, TEST_CONLL]
+    corpora = [DEV_CONLL, TRAIN_FTE, TEST_CONLL]
     for c in corpora:
         with codecs.open(c, "r", "utf-8") as cf:
             ctoks = [line.split("\t")[1].lower() for line in cf  if line != "\n"]
@@ -322,7 +323,7 @@ def preprocess_wvf():
         reqdtoks.update(ctoks)
     sys.stdout.write("\ntotal(train+dev+test) vocabulary size = " + str(len(reqdtoks)) + "\nfiltering out the word vectors...")
 
-    ws = ["glove.6B.100d.txt", "glove.6B.50d.txt",  "glove.840B.300d.txt", "glove.6B.200d.txt"]
+    #ws = ["glove.6B.100d.txt", "glove.6B.50d.txt",  "glove.840B.300d.txt", "glove.6B.200d.txt"]
     for w in ws:
         wvf = open(DATADIR + w, 'r')
         newwvf = DATADIR + w[:-3] + "framevocab.txt"
@@ -343,3 +344,6 @@ dev, test = process_fulltext()
 totsents = numsentsreused = fspno = numlus = 0.0
 isfirst = isfirstsent = True
 process_exemplars(dev, test)
+
+if len(sys.argv) >= 2:
+   preprocess_wvf([sys.argv[1]])

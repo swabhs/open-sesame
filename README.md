@@ -1,5 +1,7 @@
 Frame-semantic parser for automatically detecting semantic frames and their arguments, with the respective labels, from text. Uses a softmax-margin segmental RNN model.
 
+This README only contains instructions for running the baseline SegRNN model, instructions for other models will be updated soon.
+
 #### Required software
 
  * A C++ compiler supporting the [C++11 language standard](https://en.wikipedia.org/wiki/C%2B%2B11)
@@ -24,6 +26,14 @@ The above script writes the train, dev and test files in the required format int
 
 There is plenty of noise in the data, and all the sentences which could not be converted. The location of these, along with the error is written to the standard error.
 
+To use pretrained GloVe word embeddings, download the [GloVe files](https://nlp.stanford.edu/projects/glove/) and place them under data/. Run the preprocessing with an extra argument for the intended GloVe file. This trims the GloVe files to the FrameNet vocabulary, to ease memory requirements. For example, the command
+
+```python
+python preprocess.py glove.6B.100d.txt 2> err
+
+``` 
+creates glove.6B.100d.framevocab.txt under data/. 
+
 ### Frame Identification
 To run the biLSTM frame identification module, execute:
 
@@ -39,8 +49,7 @@ python frameid.py \
 
 #### Arg Identification
 
-This step requires DyNet.
-
+To run the vanilla SegRNN model, use
 ```python
 cd src/
 python segrnn-argid.py 2> err
