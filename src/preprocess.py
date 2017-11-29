@@ -107,6 +107,9 @@ def get_all_fsps_in_sent(sent, sentann, fspno, lex_unit, frame, isfulltextann, c
 
     # get all the FSP annotations for the sentece : it might have multiple targets and hence multiple FSPs
     for anno in sent.findall('fn:annotationSet', ns):
+        if annotation_id == "2019791" and VERSION == "1.5":
+            # Hack to skip an erroneous annotation of Cathedral as raise.v with frame "Growing_food".
+            continue
         numannosets += 1
         if numannosets == 1:
             continue
@@ -182,6 +185,9 @@ def get_annoids(filelist, outf, outsentf):
             numsents += 1
             sys.stderr.write("sentence:\t" + str(sentence.attrib["ID"]) + "\n")
             for annotation in sentence.iter('{http://framenet.icsi.berkeley.edu}annotationSet'):
+                if annotation_id == "2019791" and VERSION == "1.5":
+                    # Hack to skip an erroneous annotation of Cathedral as raise.v with frame "Growing_food".
+                    continue
                 if "luName" in annotation.attrib and "frameName" in annotation.attrib:
                     annos.append(annotation.attrib["ID"])
             # get the tokenization and pos tags for a sentence
