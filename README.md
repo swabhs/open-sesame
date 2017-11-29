@@ -39,8 +39,7 @@ To run the biLSTM frame identification module, execute:
 
 ```python
 cd src/
-python frameid.py \
-  --mode test \
+python frameid.py --mode test
 
 
 ```
@@ -49,12 +48,13 @@ python frameid.py \
 
 #### Arg Identification
 
-To run the vanilla SegRNN model, use
+To train the vanilla SegRNN model, use
 ```python
 cd src/
 python segrnn-argid.py 2> err
 
 ```
+To test on the trained models, use the option "--mode test".
 
 #### Contact
 
