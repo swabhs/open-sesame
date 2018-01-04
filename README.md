@@ -17,7 +17,7 @@ Create a dynet-base/ directory here. Follow the [python installation directions]
 
 First, create a data/ directory here, download FrameNet version 1.x and place it under data/fndata-1.x/. Also create a directory data/neural/fn1.x/ for the data files in CoNLL 2009 format, which will be generated in the steps below. Now, create the train, test and dev splits from the data by rewriting the xml files provided in CoNLL 2009 format, with BIOS tags, for simplicity, by executing the following:
 
-```python
+```sh
 cd src/
 python preprocess.py 2> err
 
@@ -28,7 +28,7 @@ There is plenty of noise in the data, and all the sentences which could not be c
 
 To use pretrained GloVe word embeddings, download the [GloVe files](https://nlp.stanford.edu/projects/glove/) and place them under data/. Run the preprocessing with an extra argument for the intended GloVe file. This trims the GloVe files to the FrameNet vocabulary, to ease memory requirements. For example, the command
 
-```python
+```sh
 python preprocess.py glove.6B.100d.txt 2> err
 
 ``` 
@@ -37,7 +37,7 @@ creates glove.6B.100d.framevocab.txt under data/.
 ### Frame Identification
 To run the biLSTM frame identification module, execute:
 
-```python
+```sh
 cd src/
 python frameid.py --mode test
 
@@ -49,12 +49,12 @@ python frameid.py --mode test
 #### Arg Identification
 
 To train the vanilla SegRNN model, use
-```python
+```sh
 cd src/
 python segrnn-argid.py 2> err
 
 ```
-To test on the trained models, use the option "--mode test".
+To test the trained models, use the option "`--mode test`".
 
 #### Contact
 
