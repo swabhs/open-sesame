@@ -882,7 +882,7 @@ DEV_EVAL_EPOCHS = 10 * LOSS_EVAL_EPOCH
 
 if options.mode in ['test', 'refresh']:
     sys.stderr.write("reusing " + options.modelfile + "...\n")
-    model.load(options.modelfile)
+    model.populate(options.modelfile)
 
 if options.mode in ['train', 'refresh']:
     tagged = loss = 0.0

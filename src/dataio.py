@@ -29,7 +29,7 @@ def read_conll(conllfile, syn_type=None):
             l = l.strip()
             if l == "":
                 if elements[0].sent_num != snum:
-                    sentence = Sentence(syn_type,elements=elements)
+                    sentence = Sentence(syn_type, elements=elements)
                     if read_constits:
                         sentence.get_all_parts_of_ctree(cparses[next], CLABELDICT, True)
                     next += 1
