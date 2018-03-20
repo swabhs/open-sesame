@@ -282,7 +282,7 @@ def get_base_embeddings(trainmode, unkdtokens, tg_start, sentence):
     else:
         emb_x = [v_x[tok] for tok in unkdtokens]
     pos_x = [p_x[pos] for pos in sentence.postags]
-    dist_x = [scalarInput(abs(i - tg_start) + 1) for i in xrange(sentlen)]
+    dist_x = [scalarInput(i - tg_start + 1) for i in xrange(sentlen)]
 
     baseinp_x = [(pw_i * concatenate([emb_x[j], pos_x[j], dist_x[j]]) + pb_i) for j in xrange(sentlen)]
 

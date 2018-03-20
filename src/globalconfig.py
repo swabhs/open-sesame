@@ -21,10 +21,10 @@ VERSION="1.5"
 DATADIR = "../data/"
 PARSERDATADIR = DATADIR + "neural/fn" + VERSION + "/"
 
-TRAIN_FTE = PARSERDATADIR + "fn" + VERSION + ".fulltext.train.conll.bios"
-TRAIN_EXEMPLAR = PARSERDATADIR + "fn" + VERSION + ".exemplar.train.conll.bios"
-DEV_CONLL   = PARSERDATADIR + "fn" + VERSION + ".dev.conll.bios"
-TEST_CONLL  = PARSERDATADIR + "fn" + VERSION + ".test.conll.bios"
+TRAIN_FTE = PARSERDATADIR + "fn" + VERSION + ".fulltext.train.syntaxnet.conll"
+TRAIN_EXEMPLAR = PARSERDATADIR + "fn" + VERSION + ".exemplar.train.syntaxnet.conll"
+DEV_CONLL   = PARSERDATADIR + "fn" + VERSION + ".dev.syntaxnet.conll"
+TEST_CONLL  = PARSERDATADIR + "fn" + VERSION + ".test.syntaxnet.conll"
 
 FNDATADIR = DATADIR + "fndata-" + VERSION + "/"
 LU_INDEX = FNDATADIR + "luIndex.xml"
@@ -82,7 +82,7 @@ DEVFILES = [
         ]
 
 
-FILTERED_WVECS_FILE = DATADIR + "glove.6B.100d.framevocab.txt"
+FILTERED_WVECS_FILE = DATADIR + "glove.6B.100d.framenet.txt"
 
 PTBDATADIR = DATADIR + "ptb/"
 

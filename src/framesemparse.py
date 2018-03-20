@@ -4,6 +4,7 @@ from globalconfig import *
 # UTF8Writer = codecs.getwriter('utf8')
 # sys.stdout = UTF8Writer(sys.stdout)
 
+
 class LexicalUnit(object):
 
     def __init__(self, id, posid):
@@ -71,13 +72,15 @@ class FrameSemParse(object):
     def __init__(self, sentence):
         self.tokens = sentence.tokens
         self.postags = sentence.postags
-        self.sentence = sentence # TODO: clunky, there should be some inheritance, etc.
-        self.targetframedict = {} # map of target position and frame-id
+        self.lemmas = sentence.lemmas
+        # TODO: clunky, there should be some inheritance, etc.
+        self.sentence = sentence
+        self.targetframedict = {}  # map of target position and frame-id
         self.frame = None
         self.lu = None
         # self.fes = {} # map of FE position to a map between FE-type(BIOS) and the label
         self.numargs = 0
-        self.modifiable = True # to differentiate between gold and predicted
+        self.modifiable = True  # to differentiate between gold and predicted
 
     def print_example(self, vocdict, ludict, fedict, framedict):
         if not DEBUGMODE:
@@ -95,30 +98,32 @@ class FrameSemParse(object):
             for span in self.fes[fe]:
                 for pos in span:
                     print vocdict.getstr(self.tokens[pos])
-        print 
+        print
 
     def add_target(self, targetpos, luid, lupos, frameid):
         if not self.modifiable:
-            raise Exception('attempt to add target and frame to unmodifiable example')
+            raise Exception(
+                'attempt to add target and frame to unmodifiable example')
         if targetpos in self.targetframedict:
             raise Exception('target already in parse', targetpos, frameid)
 
         if self.frame is not None and frameid != self.frame.id:
-            raise Exception("two different frames in a single parse, illegal", frameid, self.frame.id)
+            raise Exception(
+                "two different frames in a single parse, illegal", frameid, self.frame.id)
         self.frame = Frame(frameid)
 
         if self.lu is not None and luid != self.lu.id:
             raise Exception("different LU ID than original", self.lu.id, luid)
         self.lu = LexicalUnit(luid, lupos)
         self.targetframedict[targetpos] = (self.lu, self.frame)
-        
+
     def add_fe(self, felabelid, festartpos, feendpos):
         if not self.modifiable:
             raise Exception('attempt to add argument to unmodifiable example')
         fe = FrameElement(felabelid)
         if fe not in self.fes:
             self.fes[fe] = []
-        self.fes[fe].append((festartpos,feendpos))
+        self.fes[fe].append((festartpos, feendpos))
         self.numargs += 1
 
     def get_only_targets(self):

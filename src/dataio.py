@@ -108,10 +108,44 @@ def create_target_frame_map(luIndex_file,  tf_map):
         tot += 1
     f.close()
 
-    sys.stderr.write("# unique targets = " + str(len(tf_map)) + "\n")
-    sys.stderr.write("# total targets = " + str(tot) + "\n")
+    sys.stderr.write("# unique LUs = " + str(len(tf_map)) + "\n")
+    sys.stderr.write("# total LUs = " + str(tot) + "\n")
     sys.stderr.write("# targets with multiple frames = " + str(repeated) + "\n")
     sys.stderr.write("# max frames per target = " + str(multiplicity) + "\n\n")
+    return tf_map
+
+def create_target_lu_map():
+    sys.stderr.write("Reading the lexical unit index file: {}\n".format(LU_INDEX))
+
+    lu_index_file = open(LU_INDEX, "rb")
+    #    with codecs.open(luIndex_file, "r", "utf-8") as xml_file: # TODO: why won't this right way of reading work?
+    tree = et.parse(lu_index_file)
+    root = tree.getroot()
+
+    multiplicity = 0
+    repeated = 0
+    total = 0
+
+    target_lu_map = {}
+    for lu in root.iter('{http://framenet.icsi.berkeley.edu}lu'):
+        lu_name = lu.attrib["name"]
+        target_name = lu_name.split('.')[0]
+        if target_name not in target_lu_map:
+            target_lu_map[target_name] = []
+        else:
+            repeated += 1
+        target_lu_map[target_name].append(lu_name)
+        if len(target_lu_map[target_name]) > multiplicity:
+            multiplicity = len(target_lu_map[target_name])
+        total += 1
+    lu_index_file.close()
+
+    sys.stderr.write("# unique targets = {}\n".format(len(target_lu_map)))
+    sys.stderr.write("# total targets = {}\n".format(total))
+    sys.stderr.write("# targets with multiple LUs = {}\n".format(repeated))
+    sys.stderr.write("# max LUs per target = {}\n\n".format(multiplicity))
+    return target_lu_map
+
 
 def read_fes_lus(frame_file):
     f = open(frame_file, "rb")

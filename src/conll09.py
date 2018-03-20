@@ -190,6 +190,21 @@ class CoNLL09Example(FrameSemParse):
             mystr += tmp.get_str()
         return mystr
 
+    def get_newstr_lu(self, targetpred):  # after substituting predicted frame
+        mystr = ""
+        for e in xrange(len(self._elements)):
+            tmp = deepcopy(self._elements[e])
+            if (tmp.id - 1) in targetpred:
+                tmp.is_pred = True
+                tmp.lu = targetpred[tmp.id - 1][0]
+                tmp.lupos = targetpred[tmp.id - 1][0]
+            else:
+                tmp.is_pred = False
+                tmp.lu = LUDICT.getid(NOTALABEL)
+                tmp.lupos = LUPOSDICT.getid(NOTALABEL)
+            mystr += tmp.get_str()
+        return mystr
+
     # def get_newstr_fe(self, targetfes): # after substituting predicted FEs
     #     mystr = ""
     #     insidespan = False

@@ -20,6 +20,18 @@ def calc_f(scores):
         f = 2.0 * pr * re / (pr + re)
     return pr, re, f
 
+def evaluate_example_targetid(goldtargets, prediction):
+    tp = fp = fn = 0.0
+    for target in goldtargets:
+        if target in prediction:
+            tp += 1
+        else:
+            fn += 1
+    for pred_target in prediction:
+        if pred_target not in goldtargets:
+            fp += 1
+    return [tp, fp, fn]
+
 def evaluate_example_frameid(goldframe, prediction):
     tp = fp = fn = 0.0
     predframe = prediction.items()[0][1][1]

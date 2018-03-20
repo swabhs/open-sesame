@@ -286,7 +286,7 @@ if options.mode in ["train", "refresh"]:
         adam.update_epoch(1.0)
 
 elif options.mode == "test":
-    model.load(options.modelfile)
+    model.populate(options.modelfile)
     corpus_tpfpfn = [0.0, 0.0, 0.0]
 
     testpredictions = []

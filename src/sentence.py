@@ -7,17 +7,20 @@ class Sentence(object):
     The same sentence can be associated with multiple frame-semantic parses"""
 
     # TODO add inheritance for constit sentence vs dep sentence
-    def __init__(self, syn_type, elements=None, tokens=None, postags=None, sentnum=None):
+    def __init__(self, syn_type, elements=None, tokens=None, postags=None, lemmas=None, sentnum=None):
         if elements:
             self.sent_num = elements[0].sent_num
             self.tokens = [e.form for e in elements]
             self.postags = [e.nltk_pos for e in elements]
+            self.lemmas = [e.nltk_lemma for e in elements]
         if sentnum:
             self.sent_num = sentnum
         if tokens:
             self.tokens = tokens
         if postags:
             self.postags = postags
+        if lemmas:
+            self.lemmas = lemmas
 
         if syn_type == "dep":
             self.depheads = [e.dephead - 1 for e in elements]
@@ -30,7 +33,8 @@ class Sentence(object):
                 raise Exception("root not found!")
             self.deprels = [e.deprel for e in elements]
 
-            self.rootpath = [self.get_path_to_root(i) for i in xrange(len(self.tokens))]
+            self.rootpath = [self.get_path_to_root(
+                i) for i in xrange(len(self.tokens))]
             self.outheads = self.get_heads_outside()
             self.paths = {}
             self.shortest_paths = {}
@@ -55,7 +59,8 @@ class Sentence(object):
         outheads = {}
         for j in xrange(len(self.tokens)):
             for i in xrange(j + 1):
-                outheads[(i, j)] = sum([1 for s in xrange(i, j + 1) if not i <= self.depheads[s] <= j])
+                outheads[(i, j)] = sum(
+                    [1 for s in xrange(i, j + 1) if not i <= self.depheads[s] <= j])
         return outheads
 
     def get_common_path(self, src, dest):
@@ -97,7 +102,8 @@ class Sentence(object):
     def get_all_shortest_paths(self, target):
         for j in xrange(len(self.tokens)):
             for i in xrange(j + 1):
-                self.shortest_paths[(i, j, target)] = frozenset(self.get_shortest_path_in_span(target, (i, j)))
+                self.shortest_paths[(i, j, target)] = frozenset(
+                    self.get_shortest_path_in_span(target, (i, j)))
                 # print "num shortest paths:", len(set(self.shortest_paths.values())),
                 # "num spans:", len(self.shortest_paths)
 
@@ -108,7 +114,8 @@ class Sentence(object):
             if node == target:
                 return [node]
             if (node, target) not in self.paths:
-                raise Exception("never considered this path", node, span, target)
+                raise Exception("never considered this path",
+                                node, span, target)
             if len(self.paths[(node, target)]) < splen:
                 splen = len(self.paths[(node, target)])
                 nodewithsp = node
@@ -135,7 +142,8 @@ class Sentence(object):
         if not learn_features:
             return
         # get stuff for constit features
-        self.leafnodes = [k for k in self.cparse.subtrees(lambda t: t.height() == 2)]
+        self.leafnodes = [k for k in self.cparse.subtrees(
+            lambda t: t.height() == 2)]
         for a in xrange(len(self.leafnodes)):
             if self.leafnodes[a][0] != a:
                 raise Exception("order mixup!")
@@ -205,4 +213,5 @@ class Sentence(object):
             for k in xrange(j, len(self.leafnodes)):
                 lca, _ = self.lca[(j, k)]
                 path = self.get_common_cpath(lca, self.leafnodes[target])
-                self.cpaths[(j, k, target)] = frozenset([self.idxlabelmap[p.label()] for p in path])
+                self.cpaths[(j, k, target)] = frozenset(
+                    [self.idxlabelmap[p.label()] for p in path])
