@@ -921,7 +921,7 @@ if options.mode in ['train', 'refresh']:
             if trexloss is not None:
                 loss += trexloss.scalar_value()
                 trexloss.backward()
-                adam.update(1.0)
+                adam.update()
 
             if (idx - 1) % DEV_EVAL_EPOCHS == 0 and idx > 1:
                 devstarttime = time.time()

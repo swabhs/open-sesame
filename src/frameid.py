@@ -80,7 +80,7 @@ if USE_WV:
     sys.stderr.write("using pretrained embeddings of dimension " + str(PRETDIM) + "\n")
 
 
-lock_dicts() 
+lock_dicts()
 UNKTOKEN = VOCDICT.getid(UNK)
 
 sys.stderr.write("# words in vocab: " + str(VOCDICT.size()) + "\n")
