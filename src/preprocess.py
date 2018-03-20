@@ -186,6 +186,7 @@ def get_annoids(filelist, outf, outsentf):
             numsents += 1
             sys.stderr.write("sentence:\t" + str(sentence.attrib["ID"]) + "\n")
             for annotation in sentence.iter('{http://framenet.icsi.berkeley.edu}annotationSet'):
+                annotation_id = annotation.attrib["ID"]
                 if annotation_id == "2019791" and VERSION == "1.5":
                     # Hack to skip an erroneous annotation of Cathedral as raise.v with frame "Growing_food".
                     continue
