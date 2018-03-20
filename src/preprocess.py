@@ -107,6 +107,7 @@ def get_all_fsps_in_sent(sent, sentann, fspno, lex_unit, frame, isfulltextann, c
 
     # get all the FSP annotations for the sentece : it might have multiple targets and hence multiple FSPs
     for anno in sent.findall('fn:annotationSet', ns):
+        annotation_id = anno.attrib["ID"]
         if annotation_id == "2019791" and VERSION == "1.5":
             # Hack to skip an erroneous annotation of Cathedral as raise.v with frame "Growing_food".
             continue
