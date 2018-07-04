@@ -14,24 +14,23 @@ python -m nltk.downloader averaged_perceptron_tagger wordnet
 
 ## Data Preprocessing
 
-This codebase only handles data in the XML format specified under FrameNet. However, we convert the data into [CoNLL 2009 format](https://ufal.mff.cuni.cz/conll2009-st/task-description.html) for ease of use.
+This codebase only handles data in the XML format specified under FrameNet. However, we first reformat the data for ease of readability.
 
-First, create a `data/` directory here, download [FrameNet](https://framenet.icsi.berkeley.edu/fndrupal/framenet_data) version 1.x and place it under `data/fndata-1.x/`. Also create a directory `data/neural/fn1.x/` for the data files in , which will be generated in the steps below. Now, create the train, test and dev splits from the data by rewriting the xml files provided in CoNLL 2009 format, with BIOS tags, for simplicity, by executing the following:
+1. First, create a `data/` directory here, download [FrameNet](https://framenet.icsi.berkeley.edu/fndrupal/framenet_data) version 1.x and place it under `data/fndata-1.x/`. Also create a directory `data/neural/fn1.x/` to convert to CoNLL 2009 format.
 
+2. Convert the data into a [format similar to CoNLL 2009](https://ufal.mff.cuni.cz/conll2009-st/task-description.html), but with BIO tags, by executing:
 ```sh
 cd src/
 python preprocess.py 2> err
 ```
-The above script writes the train, dev and test files in the required format into the `data/` directory.
+The above script writes the train, dev and test files in the required format into the `data/neural/fn1.x/` directory. There is plenty of noise in the annotations. The annotations which could not be used, along with the error messages, gets spit out to the standard error.
 
-There is plenty of noise in the data, and all the sentences which could not be converted. The location of these, along with the error is written to the standard error.
-
-To use pretrained GloVe word embeddings, download the [GloVe files](https://nlp.stanford.edu/projects/glove/) and place them under `data/`. Run the preprocessing with an extra argument for the intended GloVe file. This trims the GloVe files to the FrameNet vocabulary, to ease memory requirements. For example, the command
+3. [Optional, but highly recommended] If you want to use pretrained [GloVe word embeddings](https://nlp.stanford.edu/projects/glove/), download and extract them under `data/`. Run the preprocessing with an extra argument for the intended GloVe file.
 
 ```sh
 python preprocess.py glove.6B.100d.txt 2> err
 ``` 
-creates `glove.6B.100d.framevocab.txt` under `data/`.
+This trims the GloVe files to the FrameNet vocabulary, to ease memory requirements. For example, the above creates `data/glove.6B.100d.framevocab.txt` to be used by our models.
 
 ## Frame Identification
 
