@@ -82,7 +82,7 @@ DEVFILES = [
         ]
 
 
-FILTERED_WVECS_FILE = DATADIR + "glove.6B.100d.framenet.txt"
+FILTERED_WVECS_FILE = DATADIR + "glove.6B.100d.framevocab.txt"
 
 PTBDATADIR = DATADIR + "ptb/"
 

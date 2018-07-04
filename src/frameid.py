@@ -9,9 +9,11 @@ import time
 from optparse import OptionParser
 
 MODELSYMLINK = "model.frameid." + VERSION
+if not os.path.exists('tmp/'):
+    os.makedirs('tmp/')
 modelfname = "tmp/" + VERSION  + "model-" + str(time.time())
 
-# TODO use optparse
+# TODO(swabha) use optparse
 optpr = OptionParser()
 optpr.add_option("--mode", dest="mode", type='choice', choices=['train', 'test', 'refresh'], default='train')
 optpr.add_option('--model', dest="modelfile", help="Saved model file", metavar="FILE", default=MODELSYMLINK)
@@ -110,11 +112,9 @@ sys.stderr.write("# unseen, unlearnt test lexical units: " + str(LUDICT.num_unks
 sys.stderr.write("# unseen, unlearnt test LU pos tags: " + str(LUPOSDICT.num_unks()) + "\n")
 sys.stderr.write("# unseen, unlearnt test frames: " + str(FRAMEDICT.num_unks()) + "\n\n")
 
-# sys.exit()
-
 model = Model()
-adam = SimpleSGDTrainer(model)
-# adam = AdamTrainer(model, 0.0001, 0.01, 0.9999, 1e-8)
+trainer = SimpleSGDTrainer(model)
+# trainer = AdamTrainer(model, 0.0001, 0.01, 0.9999, 1e-8)
 
 v_x = model.add_lookup_parameters((VOCDICT.size(), TOKDIM))
 p_x = model.add_lookup_parameters((POSDICT.size(), POSDIM))
@@ -192,7 +192,7 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
         else:
             lu_vec = lu_x[lexunit.id]
         fbemb_i = concatenate([target_vec, lu_vec, lp_x[lexunit.posid]])
-        # TODO add more Baidu-style features here
+        # TODO(swabha): Add more Baidu-style features here.
         f_i = pw_f * rectify(pw_z * fbemb_i + pb_z) + pb_f
         if trainmode and USE_DROPOUT:
             f_i = dropout(f_i, DROPOUT_RATE)
@@ -223,7 +223,8 @@ def print_result(goldexamples, pred_targmaps):
 
 # main
 NUMEPOCHS = 10
-if options.exemplar: NUMEPOCHS = 25
+if options.exemplar:
+    NUMEPOCHS = 25
 EVAL_EVERY_EPOCH = 100
 DEV_EVAL_EPOCH = 5 * EVAL_EVERY_EPOCH
 
@@ -235,7 +236,7 @@ if options.mode in ["train", "refresh"]:
         random.shuffle(trainexamples)
         for idx, trex in enumerate(trainexamples, 1):
             if idx % EVAL_EVERY_EPOCH == 0:
-                adam.status()
+                trainer.status()
                 sys.stderr.write("%d loss = %.6f\n" %(idx, loss/tagged))
                 tagged = loss = 0.0
             inptoks = []
@@ -247,7 +248,7 @@ if options.mode in ["train", "refresh"]:
             if trexloss is not None:
                 loss += trexloss.scalar_value()
                 trexloss.backward()
-                adam.update()
+                trainer.update()
             tagged += 1
 
             if idx % DEV_EVAL_EPOCH == 0:
@@ -283,7 +284,7 @@ if options.mode in ["train", "refresh"]:
                     os.symlink(modelfname, "tmp.link")
                     os.rename("tmp.link", MODELSYMLINK)
                 sys.stderr.write("\n")
-        adam.update_epoch(1.0)
+        trainer.update_epoch(1.0)
 
 elif options.mode == "test":
     model.populate(options.modelfile)
