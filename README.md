@@ -1,6 +1,7 @@
-Frame-semantic parser for automatically detecting FrameNet frames and their frame-elements from sentences. Uses a softmax-margin segmental recurrent neural net model, based on the paper [Frame-Semantic Parsing with Softmax-Margin Segmental RNNs and a Syntactic Scaffold](https://arxiv.org/abs/1706.09528).
+Frame-semantic parser for automatically detecting [FrameNet](https://framenet.icsi.berkeley.edu/fndrupal/) frames and their frame-elements from sentences. 
+![Frame-semantics example](fig/fsp-example.png)
 
-This `README` only contains instructions for running the baseline model from [our paper](https://arxiv.org/abs/1706.09528), instructions for other models will be updated soon.
+The model is based on  softmax-margin segmental recurrent neural nets, described in our paper [Frame-Semantic Parsing with Softmax-Margin Segmental RNNs and a Syntactic Scaffold](https://arxiv.org/abs/1706.09528).
 
 ## Installation
 
@@ -16,7 +17,7 @@ python -m nltk.downloader averaged_perceptron_tagger wordnet
 
 This codebase only handles data in the XML format specified under FrameNet. However, we first reformat the data for ease of readability.
 
-1. First, create a `data/` directory here, download [FrameNet](https://framenet.icsi.berkeley.edu/fndrupal/framenet_data) version 1.x and place it under `data/fndata-1.x/`. Also create a directory `data/neural/fn1.x/` to convert to CoNLL 2009 format.
+1. First, create a `data/` directory here, download FrameNet version 1.x and place it under `data/fndata-1.x/`. Also create a directory `data/neural/fn1.x/` to convert to CoNLL 2009 format.
 
 2. Convert the data into a [format similar to CoNLL 2009](https://ufal.mff.cuni.cz/conll2009-st/task-description.html), but with BIO tags, by executing:
 ```sh
@@ -69,7 +70,7 @@ This saves the best model on validation data in the directory `src/tmp/`, which 
 To test under the best model in `src/model.segrnn-argid.1.x`, execute:
 
 ```sh
-python frameid.py --mode test > frameid.log
+python segrnn-argid.py --mode test > argid.log
 ```
 
 ## Contact and Reference
