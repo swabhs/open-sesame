@@ -21,6 +21,8 @@ def calc_f(scores):
     return pr, re, f
 
 def evaluate_example_targetid(goldtargets, prediction):
+    """ (Unlabeled) target evaluation.
+    """
     tp = fp = fn = 0.0
     for target in goldtargets:
         if target in prediction:
@@ -29,6 +31,21 @@ def evaluate_example_targetid(goldtargets, prediction):
             fn += 1
     for pred_target in prediction:
         if pred_target not in goldtargets:
+            fp += 1
+    return [tp, fp, fn]
+
+def evaluate_labeled_example_targetid(goldtargets, prediction):
+    """ Labeled lexical unit evaluation.
+    """
+    tp = fp = fn = 0.0
+    for target_pos in goldtargets:
+        goldlu = goldtargets[target_pos][0]
+        if target_pos in prediction and prediction[target_pos][0] == goldlu:
+            tp += 1
+        else:
+            fn += 1
+    for pred_target_pos in prediction:
+        if pred_target_pos not in goldtargets:
             fp += 1
     return [tp, fp, fn]
 

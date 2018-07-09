@@ -32,6 +32,26 @@ python preprocess.py glove.6B.100d.txt 2> err
 ``` 
 This trims the GloVe files to the FrameNet vocabulary, to ease memory requirements. For example, the above creates `data/glove.6B.100d.framevocab.txt` to be used by our models.
 
+## Target Identification
+
+A bidirectional LSTM model takes into account the lexical unit index in FrameNet to identify targets. This model is *not* described in the [paper](https://arxiv.org/abs/1706.09528).
+
+#### Training
+To train the target identification module, execute:
+
+```sh
+cd src/
+python targetid.py
+```
+This saves the best model on validation data in the directory `src/tmp/`, which will be pointed to by the symbolic link `src/model.targetid.1.x`. Pre-trained models coming soon.
+
+#### Test
+To test under the best model in `src/model.targetid.1.x`, execute:
+
+```sh
+python targetid.py --mode test
+```
+
 ## Frame Identification
 
 Frame identification is based on a bidirectional LSTM model.

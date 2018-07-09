@@ -9,6 +9,8 @@ import time
 from optparse import OptionParser
 
 MODELSYMLINK = "model.targetid." + VERSION
+if not os.path.exists('tmp/'):
+    os.makedirs('tmp/')
 modelfname = "tmp/" + VERSION  + "model-" + str(time.time())
 
 # TODO(swabha): use optparse
@@ -37,16 +39,16 @@ sys.stderr.write("_____________________\n")
 UNK_PROB = 0.1
 DROPOUT_RATE = 0.01
 
-TOKDIM = 60
-POSDIM = 4
-LEMDIM = 64
+TOKDIM = 100
+POSDIM = 100
+LEMDIM = 100
 
 INPDIM = TOKDIM + POSDIM + LEMDIM
 
-LSTMINPDIM = 64
-LSTMDIM = 64
+LSTMINPDIM = 100
+LSTMDIM = 100
 LSTMDEPTH = 2
-HIDDENDIM = 64
+HIDDENDIM = 100
 
 
 def combine_examples(corpus_ex):
@@ -64,11 +66,11 @@ def combine_examples(corpus_ex):
 
 trainexamples, m, t = read_conll(train_conll)
 train = combine_examples(trainexamples)
-print(len(trainexamples), "reduced to ", len(train))
+sys.stderr.write( "{} combined into {} examples for Target ID.".format(len(trainexamples), len(train)))
 
 post_train_lock_dicts()
 
-target_lu_map = create_target_lu_map()
+target_lu_map, lu_names = create_target_lu_map()
 
 if USE_WV:
     wvs = get_wvec_map()
@@ -100,41 +102,64 @@ sys.stderr.write("# unseen, unlearnt test words in vocab: " + str(VOCDICT.num_un
 sys.stderr.write("# unseen, unlearnt test POS tags: " + str(POSDICT.num_unks()) + "\n")
 sys.stderr.write("# unseen, unlearnt test lemmas: " + str(LEMDICT.num_unks()) + "\n")
 
-# def check_if_in_index(data_split):
-#     problematic = []
-#     total = 0
-#     pos_lupos_map = {}
 
-#     for ex in data_split:
-#         for target in ex.targetframedict:
-#             token = VOCDICT.getstr(ex.tokens[target]).lower()
-#             lemma = LEMDICT.getstr(ex.lemmas[target]).lower()
-#             total += 1
-#             pos = POSDICT.getstr(ex.postags[target]).lower()
-#             if token not in target_lu_map and lemma not in target_lu_map:
-#                 # sys.stderr.write(token + " ")
-#                 problematic.append((token, lemma))
-#             else:
-#                 if pos not in pos_lupos_map:
-#                     pos_lupos_map[pos] = set([])
-                
-#                 if token in target_lu_map:
-#                     for lu in target_lu_map[token]:
-#                         pos_lupos_map[pos].add(lu.split('.')[1])
-#                 else:
-#                     for lu in target_lu_map[lemma]:
-#                         pos_lupos_map[pos].add(lu.split('.')[1])
+def get_fn_pos_by_rules(pos, token):
+    """
+    Rules for mapping NLTK part of speech tags into FrameNet tags, based on co-occurrence
+    statistics, since there is not a one-to-one mapping.
+    """
+    if pos[0] == "v" or pos in ["rp", "ex", "md"]:  # Verbs
+        rule_pos = "v"
+    elif pos[0] == "n" or pos in ["$", ":", "sym", "uh"]:  # Nouns
+        rule_pos = "n"
+    elif pos[0] == "j" or pos in ["ls", "pdt", "rbr", "rbs", "prp"]:  # Adjectives
+        rule_pos = "a"
+    elif pos == "cc":  # Conjunctions
+        rule_pos = "c"
+    elif pos in ["to", "in"]:  # Prepositions
+        rule_pos = "prep"
+    elif pos in ["dt", "wdt"]:  # Determinors
+        rule_pos = "art"
+    elif pos in ["rb", "wrb"]:  # Adverbs
+        rule_pos = "adv"
+    elif pos == "cd":  # Cardinal Numbers
+        rule_pos = "num"
+    else:
+        raise Exception("Rule not defined for part-of-speech word", pos, token)
+    return rule_pos
+
+
+def check_if_potential_target(lemma):
+    """
+    Simple check to see if this is a potential position to even consider, based on
+    the LU index provided under FrameNet. Note that since we use NLTK lemmas, 
+    this might be lossy.
+    """
+    nltk_lem = LEMDICT.getstr(lemma)
+    if nltk_lem in target_lu_map or nltk_lem.lower() in target_lu_map:
+        return True
+    return False
+        
+
+def create_lexical_unit(lemma, postag):
+    """
+    Given a lemma ID and a postag ID (both derived from NLTK), ge
+    """
+    nltk_lem = LEMDICT.getstr(lemma)
+    if nltk_lem not in target_lu_map and nltk_lem.lower() in target_lu_map:
+        nltk_lem = nltk_lem.lower()
+    assert nltk_lem in target_lu_map
     
-#     sys.stderr.write("\n{} total, {} unique problematic out of {}".format(len(problematic), len(set(problematic)), total))
-#     import ipdb; ipdb.set_trace()
+    nltk_pos = POSDICT.getstr(postag)
+    rule_pos = get_fn_pos_by_rules(nltk_pos.lower(), nltk_lem)
+    rule_lupos = nltk_lem + "." + rule_pos
+    if rule_lupos not in lu_names:
+        return LexicalUnit(LEMDICT.getid(UNKTOKEN), LUPOSDICT.getid(UNKTOKEN))
+    return LexicalUnit(LEMDICT.getid(nltk_lem), LUPOSDICT.getid(rule_pos))
 
-# check_if_in_index(train)
-# check_if_in_index(dev)
-# sys.exit()
 
 model = Model()
-adam = SimpleSGDTrainer(model, 0.01)
-# adam = AdamTrainer(model, 0.0001, 0.01, 0.9999, 1e-8)
+trainer = SimpleSGDTrainer(model, 0.01)
 
 v_x = model.add_lookup_parameters((VOCDICT.size(), TOKDIM))
 p_x = model.add_lookup_parameters((POSDICT.size(), POSDIM))
@@ -198,8 +223,10 @@ def identify_targets(builders, tokens, postags, lemmas, goldtargets=None):
     bw_x = b_init.transduce(reversed(emb2_x))
 
     losses = []
-    predicted_targets = []
+    predicted_targets = {}
     for i in xrange(sentlen):
+        if not check_if_potential_target(lemmas[i]):
+            continue
         h_i = concatenate([fw_x[i], bw_x[sentlen - i - 1]])
         score_i = pw_f * rectify(pw_z * h_i + pb_z) + pb_f
         if trainmode and USE_DROPOUT:
@@ -212,7 +239,7 @@ def identify_targets(builders, tokens, postags, lemmas, goldtargets=None):
             isitatarget = int(i in goldtargets)
         
         if int(np.argmax(logloss.npvalue())) != 0:
-            predicted_targets.append(i)
+            predicted_targets[i] = (create_lexical_unit(lemmas[i], postags[i]), None)
         
         losses.append(pick(logloss, isitatarget))
     
@@ -220,28 +247,32 @@ def identify_targets(builders, tokens, postags, lemmas, goldtargets=None):
     return objective, predicted_targets
 
 # def print_result(goldexamples, pred_targmaps):
+#     # TODO(swabha): Need to spit out one conll for each LU, *WITH corresponding frame*!
 #     with codecs.open(out_conll_file, "w", "utf-8") as f:
 #         for g,p in zip(goldexamples, pred_targmaps):
-#             result = g.get_newstr_frame(p) + "\n"
+#             result = g.get_newstr_lu(p) + "\n"
 #             f.write(result)
 #         f.close()
 
 
 # main
 NUMEPOCHS = 100
+PATIENCE = 25
 EVAL_EVERY_EPOCH = 100
-DEV_EVAL_EPOCH = 10 * EVAL_EVERY_EPOCH
+DEV_EVAL_EPOCH = 3 * EVAL_EVERY_EPOCH
 
 if options.mode in ["train", "refresh"]:
     tagged = loss = 0.0
     bestdevf = 0.0
     train_result = [0.0, 0.0, 0.0]
 
+    last_updated_epoch = 0
+
     for epoch in xrange(NUMEPOCHS):
         random.shuffle(train)
         for idx, trex in enumerate(train, 1):
             if idx % EVAL_EVERY_EPOCH == 0:
-                adam.status()
+                trainer.status()
                 _, _, trainf = calc_f(train_result)
                 sys.stderr.write("%d loss = %.6f train f1 = %.4f\n" %(idx, loss/tagged, trainf))
                 tagged = loss = 0.0
@@ -257,7 +288,7 @@ if options.mode in ["train", "refresh"]:
             if trexloss is not None:
                 loss += trexloss.scalar_value()
                 trexloss.backward()
-                adam.update()
+                trainer.update()
             tagged += 1
 
             if idx % DEV_EVAL_EPOCH == 0:
@@ -288,12 +319,16 @@ if options.mode in ["train", "refresh"]:
                     bestdevf = devf
                     # TODO(swabha) : instead of printing the result
                     # print_result(devexamples, predictions)
-                    sys.stderr.write(" -- saving")
+                    sys.stderr.write(" -- saving to {}".format(MODELSYMLINK))
 
                     model.save(modelfname)
                     os.symlink(modelfname, "tmp.link")
                     os.rename("tmp.link", MODELSYMLINK)
+                    last_updated_epoch = epoch
                 sys.stderr.write("\n")
+        if epoch - last_updated_epoch > PATIENCE:
+            sys.stderr.write("Ran out of patience, ending training.")
+            break
 
 elif options.mode == "test":
     model.populate(options.modelfile)

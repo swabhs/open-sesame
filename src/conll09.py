@@ -190,7 +190,7 @@ class CoNLL09Example(FrameSemParse):
             mystr += tmp.get_str()
         return mystr
 
-    def get_newstr_lu(self, targetpred):  # after substituting predicted frame
+    def get_newstr_lu(self, targetpred):  # after substituting predicted LU
         mystr = ""
         for e in xrange(len(self._elements)):
             tmp = deepcopy(self._elements[e])

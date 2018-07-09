@@ -11,6 +11,8 @@ import time
 import math
 
 MODELSYMLINK = "model.segrnn-argid." + VERSION
+if not os.path.exists('tmp/'):
+    os.makedirs('tmp/')
 modelfname = "tmp/" + VERSION + "model.sra-" + str(time.time())
 
 optpr = OptionParser()

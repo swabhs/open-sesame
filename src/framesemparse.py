@@ -12,7 +12,7 @@ class LexicalUnit(object):
         self.posid = posid
 
     def get_str(self, ludict, luposdict):
-        return ludict.getstr(self.id) + " " + luposdict.getstr(posid)
+        return ludict.getstr(self.id) + "." + luposdict.getstr(self.posid)
 
     def __hash__(self):
         return hash((self.id, self.posid))

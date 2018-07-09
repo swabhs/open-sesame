@@ -127,8 +127,10 @@ def create_target_lu_map():
     total = 0
 
     target_lu_map = {}
+    lu_names = set([])
     for lu in root.iter('{http://framenet.icsi.berkeley.edu}lu'):
         lu_name = lu.attrib["name"]
+        lu_names.add(lu_name)
         target_name = lu_name.split('.')[0]
         if target_name not in target_lu_map:
             target_lu_map[target_name] = []
@@ -144,7 +146,7 @@ def create_target_lu_map():
     sys.stderr.write("# total targets = {}\n".format(total))
     sys.stderr.write("# targets with multiple LUs = {}\n".format(repeated))
     sys.stderr.write("# max LUs per target = {}\n\n".format(multiplicity))
-    return target_lu_map
+    return target_lu_map, lu_names
 
 
 def read_fes_lus(frame_file):
