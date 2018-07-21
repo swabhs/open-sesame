@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-from evaluation import *
-from dynet import *
-from arksemaforeval import *
-
 import os
 import sys
 import time
 from optparse import OptionParser
+
+from arksemaforeval import *
+from dynet import *
+from evaluation import *
 
 MODELSYMLINK = "model.frameid." + VERSION
 if not os.path.exists('tmp/'):
@@ -216,7 +216,7 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
 def print_result(goldexamples, pred_targmaps):
     with codecs.open(out_conll_file, "w", "utf-8") as f:
         for g,p in zip(goldexamples, pred_targmaps):
-            result = g.get_newstr_frame(p) + "\n"
+            result = g.get_predicted_frame_conll(p) + "\n"
             f.write(result)
         f.close()
 

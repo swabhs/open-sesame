@@ -1,25 +1,24 @@
 # -*- coding: utf-8 -*-
-from evaluation import *
-from dynet import *
-from arksemaforeval import *
-
 import os
 import sys
 import time
 from optparse import OptionParser
+
+from arksemaforeval import *
+from dynet import *
+from evaluation import *
 
 MODELSYMLINK = "model.targetid." + VERSION
 if not os.path.exists('tmp/'):
     os.makedirs('tmp/')
 modelfname = "tmp/" + VERSION  + "model-" + str(time.time())
 
-# TODO(swabha): use optparse
 optpr = OptionParser()
 optpr.add_option("--mode", dest="mode", type='choice', choices=['train', 'test', 'refresh'], default='train')
-optpr.add_option('--model', dest="modelfile", help="Saved model file", metavar="FILE", default=MODELSYMLINK)
+optpr.add_option('--model', dest="model_file", help="Saved model file", metavar="FILE", default=MODELSYMLINK)
+optpr.add_option('--raw', action="store_true", default=False)
 optpr.add_option("--nodrop", action="store_true", default=False)
 optpr.add_option("--nowordvec", action="store_true", default=False)
-
 (options, args) = optpr.parse_args()
 
 train_conll = TRAIN_FTE
@@ -52,6 +51,10 @@ HIDDENDIM = 100
 
 
 def combine_examples(corpus_ex):
+    """
+    Target ID needs to be trained for all targets in the sentence jointly, as opposed to
+    frame and arg ID. Returns all target annotations for a given sentence.
+    """
     combined_ex = [corpus_ex[0]]
     for ex in corpus_ex[1:]:
         if ex.sent_num == combined_ex[-1].sent_num:
@@ -64,9 +67,9 @@ def combine_examples(corpus_ex):
         combined_ex.append(ex)
     return combined_ex
 
-trainexamples, m, t = read_conll(train_conll)
-train = combine_examples(trainexamples)
-sys.stderr.write( "{} combined into {} examples for Target ID.".format(len(trainexamples), len(train)))
+train_examples, _, _ = read_conll(train_conll)
+combined_train = combine_examples(train_examples)
+sys.stderr.write( "{} combined into {} examples for Target ID.\n".format(len(train_examples), len(combined_train)))
 
 post_train_lock_dicts()
 
@@ -80,18 +83,18 @@ if USE_WV:
 lock_dicts() 
 UNKTOKEN = VOCDICT.getid(UNK)
 
-sys.stderr.write("# words in vocab: " + str(VOCDICT.size()) + "\n")
+sys.stderr.write("# Words in vocab: " + str(VOCDICT.size()) + "\n")
 sys.stderr.write("# POS tags: " + str(POSDICT.size()) + "\n")
-sys.stderr.write("# lemmas: " + str(LEMDICT.size()) + "\n")
+sys.stderr.write("# Lemmas: " + str(LEMDICT.size()) + "\n")
 
 if options.mode in ["train", "refresh"]:
-    devexamples, m, t = read_conll(DEV_CONLL)
-    dev = combine_examples(devexamples)
+    dev_examples, _, _ = read_conll(DEV_CONLL)
+    combined_dev = combine_examples(dev_examples)
     sys.stderr.write("unknowns in dev\n\n_____________________\n")
     out_conll_file = "predicted." + VERSION + ".targetid.dev.out"
 elif options.mode  == "test":
-    devexamples, m, t = read_conll(TEST_CONLL)
-    dev = combine_examples(devexamples)
+    dev_examples, m, t = read_conll(TEST_CONLL)
+    combined_dev = combine_examples(dev_examples)
     sys.stderr.write("unknowns in test\n\n_____________________\n")
     out_conll_file = "predicted." + VERSION + ".targetid.test.out"
     fefile = "my.predict.test.frame.elements"
@@ -141,21 +144,29 @@ def check_if_potential_target(lemma):
     return False
         
 
-def create_lexical_unit(lemma, postag):
+def create_lexical_unit(lemma_id, pos_id, token_id):
     """
-    Given a lemma ID and a postag ID (both derived from NLTK), ge
+    Given a lemma ID and a POS ID (both lemma and POS derived from NLTK), 
+    create a LexicalUnit object.
+    If lemma is unknown, then check if token is in the LU vocabulary, and 
+    use it if present (Hack).
     """
-    nltk_lem = LEMDICT.getstr(lemma)
-    if nltk_lem not in target_lu_map and nltk_lem.lower() in target_lu_map:
-        nltk_lem = nltk_lem.lower()
-    assert nltk_lem in target_lu_map
+    nltk_lem_str = LEMDICT.getstr(lemma_id)
+    if nltk_lem_str not in target_lu_map and nltk_lem_str.lower() in target_lu_map:
+        nltk_lem_str = nltk_lem_str.lower()
+    if nltk_lem_str == UNKTOKEN:
+        if VOCDICT.getstr(token_id) in target_lu_map:
+            nltk_lem_str = VOCDICT.getstr(token_id)
+        elif VOCDICT.getstr(token_id).lower() in target_lu_map:
+            nltk_lem_str = VOCDICT.getstr(token_id).lower()
+    assert nltk_lem_str in target_lu_map
     
-    nltk_pos = POSDICT.getstr(postag)
-    rule_pos = get_fn_pos_by_rules(nltk_pos.lower(), nltk_lem)
-    rule_lupos = nltk_lem + "." + rule_pos
+    nltk_pos_str = POSDICT.getstr(pos_id)
+    rule_pos_str = get_fn_pos_by_rules(nltk_pos_str.lower(), nltk_lem_str)
+    rule_lupos = nltk_lem_str + "." + rule_pos_str
     if rule_lupos not in lu_names:
-        return LexicalUnit(LEMDICT.getid(UNKTOKEN), LUPOSDICT.getid(UNKTOKEN))
-    return LexicalUnit(LEMDICT.getid(nltk_lem), LUPOSDICT.getid(rule_pos))
+        return LexicalUnit(LUDICT.getid(UNKTOKEN), LUPOSDICT.getid(rule_pos_str))
+    return LexicalUnit(LUDICT.getid(nltk_lem_str), LUPOSDICT.getid(rule_pos_str))
 
 
 model = Model()
@@ -185,7 +196,12 @@ b_z = model.add_parameters((HIDDENDIM, 1))
 w_f = model.add_parameters((2, HIDDENDIM))  # prediction: is a target or not.
 b_f = model.add_parameters((2, 1))
 
+
 def identify_targets(builders, tokens, postags, lemmas, goldtargets=None):
+    """
+    Target identification model, using bidirectional LSTMs, with a
+    multilinear perceptron layer on top for classification.
+    """
     renew_cg()
     trainmode = (goldtargets is not None)
 
@@ -203,7 +219,7 @@ def identify_targets(builders, tokens, postags, lemmas, goldtargets=None):
         pb_e = parameter(b_e)
         for i in xrange(sentlen):
             if tokens[i] in wvs:
-                nonupdatedwv = e_x[tokens[i]]  # prevent the wvecs from being updated
+                nonupdatedwv = e_x[tokens[i]]  # Prevent the pretrained embeddings from being updated.
                 emb2_xi[i] = emb2_xi[i] + pw_e * nonupdatedwv + pb_e
 
     emb2_x = [rectify(emb2_xi[i]) for i in xrange(sentlen)]
@@ -213,7 +229,7 @@ def identify_targets(builders, tokens, postags, lemmas, goldtargets=None):
     pw_f = parameter(w_f)
     pb_f = parameter(b_f)
 
-    # initializing the two LSTMs
+    # Initializing the two LSTMs.
     if USE_DROPOUT and trainmode:
         builders[0].set_dropout(DROPOUT_RATE)
         builders[1].set_dropout(DROPOUT_RATE)
@@ -239,23 +255,28 @@ def identify_targets(builders, tokens, postags, lemmas, goldtargets=None):
             isitatarget = int(i in goldtargets)
         
         if int(np.argmax(logloss.npvalue())) != 0:
-            predicted_targets[i] = (create_lexical_unit(lemmas[i], postags[i]), None)
+            predicted_targets[i] = (create_lexical_unit(lemmas[i], postags[i], tokens[i]), None)
         
         losses.append(pick(logloss, isitatarget))
     
     objective = -esum(losses) if losses else None
     return objective, predicted_targets
 
-# def print_result(goldexamples, pred_targmaps):
-#     # TODO(swabha): Need to spit out one conll for each LU, *WITH corresponding frame*!
-#     with codecs.open(out_conll_file, "w", "utf-8") as f:
-#         for g,p in zip(goldexamples, pred_targmaps):
-#             result = g.get_newstr_lu(p) + "\n"
-#             f.write(result)
-#         f.close()
+
+def print_as_conll(gold_examples, predicted_target_dict):
+    """
+    Creates a CoNLL object with predicted target and lexical unit.
+    # TODO(swabha): Need to spit out one conll for each LU, *WITH corresponding frame*!
+    """
+    with codecs.open(out_conll_file, "w", "utf-8") as conll_file:
+        for gold, pred in zip(gold_examples, predicted_target_dict):
+            for target in sorted(pred):
+                result = gold.get_predicted_target_conll(target, pred[target][0]) + "\n"
+                conll_file.write(result)
+        conll_file.close()
 
 
-# main
+# Main method.
 NUMEPOCHS = 100
 PATIENCE = 25
 EVAL_EVERY_EPOCH = 100
@@ -269,8 +290,8 @@ if options.mode in ["train", "refresh"]:
     last_updated_epoch = 0
 
     for epoch in xrange(NUMEPOCHS):
-        random.shuffle(train)
-        for idx, trex in enumerate(train, 1):
+        random.shuffle(combined_train)
+        for idx, trex in enumerate(combined_train, 1):
             if idx % EVAL_EVERY_EPOCH == 0:
                 trainer.status()
                 _, _, trainf = calc_f(train_result)
@@ -295,7 +316,7 @@ if options.mode in ["train", "refresh"]:
                 corpus_result = [0.0, 0.0, 0.0]
                 devtagged = devloss = 0.0
                 predictions = []
-                for devex in dev:
+                for devex in combined_dev:
                     devludict = devex.get_only_targets()
                     dl, predicted = identify_targets(
                         builders, devex.tokens, devex.postags, devex.lemmas)
@@ -331,70 +352,26 @@ if options.mode in ["train", "refresh"]:
             break
 
 elif options.mode == "test":
-    model.populate(options.modelfile)
-    corpus_tpfpfn = [0.0, 0.0, 0.0]
+    model.populate(options.model_file)
+    corpus_tp_fp_fn = [0.0, 0.0, 0.0]
 
-    testpredictions = []
+    test_predictions = []
 
-    # sn = devexamples[0].sent_num
-    # sl = [0.0,0.0,0.0]
-    # print("Sent#%d :" % sn)
-    # devexamples[0].print_internal_sent()
+    for test_ex in combined_dev:
+        _, predicted = identify_targets(builders, test_ex.tokens, test_ex.postags, test_ex.lemmas)
 
-    for testex in dev:
-        _, predicted = identify_targets(builders, testex.tokens, testex.postags, testex.lemmas)
+        tp_fp_fn = evaluate_example_targetid(test_ex.targetframedict.keys(), predicted)
+        corpus_tp_fp_fn = np.add(corpus_tp_fp_fn, tp_fp_fn)
 
-        tpfpfn = evaluate_example_targetid(testex.targetframedict.keys(), predicted)
-        corpus_tpfpfn = np.add(corpus_tpfpfn, tpfpfn)
+        test_predictions.append(predicted)
 
-        testpredictions.append(predicted)
-
-        # sentnum = testex.sent_num
-        # if sentnum != sn:
-        #     lp, lr, lf = calc_f(sl)
-        #     print("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
-        #           "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
-        #           "\n-----------------------------\n"
-        #           % (sl[0], sl[0]+sl[1], sl[0]+sl[-1],
-        #              sn,
-        #              lr, sl[0], sl[-1] + sl[0],
-        #              lp, sl[0], sl[1] + sl[0],
-        #              lf))
-        #     sl = [0.0,0.0,0.0]
-        #     sn = sentnum
-        #     print("Sent#%d :" % sentnum)
-        #     testex.print_internal_sent()
-
-        # print "gold:"
-        # testex.print_internal_frame()
-        # print "prediction:"
-        # testex.print_external_frame(predicted)
-
-        # sl = np.add(sl, tpfpfn)
-        # print tpfpfn[0], "/", tpfpfn[0]+tpfpfn[1], "/", tpfpfn[0]+tpfpfn[-1]
-
-    # last sentence
-    # lp, lr, lf = calc_f(sl)
-    # print("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
-    #       "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
-    #       "\n-----------------------------\n"
-    #       % (sl[0], sl[0]+sl[1], sl[0]+sl[-1],
-    #          sentnum,
-    #          lp, sl[0], sl[1] + sl[0],
-    #          lr, sl[0], sl[-1] + sl[0],
-    #          lf))
-
-    testtp, testfp, testfn = corpus_tpfpfn
-    testp, testr, testf = calc_f(corpus_tpfpfn)
+    test_tp, test_fp, test_fn = corpus_tp_fp_fn
+    test_prec, test_rec, test_f1 = calc_f(corpus_tp_fp_fn)
     sys.stderr.write("[test] p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f\n" %(
-        testp, testtp, testtp + testfp,
-        testr, testtp, testtp + testfp,
-        testf))
+        test_prec, test_tp, test_tp + test_fp,
+        test_rec, test_tp, test_tp + test_fn,
+        test_f1))
 
-    # sys.stderr.write("printing output conll to " + out_conll_file + " ... ")
-    # print_result(devexamples, testpredictions)
-    sys.stderr.write("done!\n")
-
-    # sys.stderr.write("printing frame-elements to " + fefile + " ...\n")
-    # convert_conll_to_frame_elements(out_conll_file, fefile)
-    # sys.stderr.write("done!\n")
+    sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
+    print_as_conll(combined_dev, test_predictions)
+    sys.stderr.write("Done!\n")

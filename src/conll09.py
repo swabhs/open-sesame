@@ -48,7 +48,7 @@ class CoNLL09Element:
         else:
             self.role = FEDICT.addstr(ele[14])
 
-    def get_str(self, rolelabel=None):
+    def get_str(self, rolelabel=None, no_args=False):
         idstr = str(self.id) + "\t"
         form = VOCDICT.getstr(self.form) + "\t"
         lem = LEMDICT.getstr(self.nltk_lemma) + "\t"
@@ -71,6 +71,9 @@ class CoNLL09Element:
                 rolelabel = INV_ARGTYPES[self.argtype] + "-" + FEDICT.getstr(self.role) + "\t"
             else:
                 rolelabel = INV_ARGTYPES[self.argtype] + "\t"
+
+        if no_args:  # For Target ID / Frame ID predictions
+            rolelabel = "_\t"
 
         if DEBUGMODE:
             return idstr + form + lu + frame + rolelabel
@@ -173,37 +176,44 @@ class CoNLL09Example(FrameSemParse):
 
         return mystr
 
-    def get_newstr_frame(self, targetpred):  # after substituting predicted frame
-        mystr = ""
+    def get_predicted_frame_conll(self, predicted_frame):
+        """
+        Get new CoNLL string, after substituting predicted frame.
+        """
+        new_conll_str = ""
         for e in xrange(len(self._elements)):
-            tmp = deepcopy(self._elements[e])
-            if (tmp.id - 1) in targetpred:
-                tmp.is_pred = True
-                tmp.lu = targetpred[tmp.id - 1][0].id
-                tmp.lupos = targetpred[tmp.id - 1][0].posid
-                tmp.frame = targetpred[tmp.id - 1][1].id
+            field = deepcopy(self._elements[e])
+            if (field.id - 1) in predicted_frame:
+                field.is_pred = True
+                field.lu = predicted_frame[field.id - 1][0].id
+                field.lupos = predicted_frame[field.id - 1][0].posid
+                field.frame = predicted_frame[field.id - 1][1].id
             else:
-                tmp.is_pred = False
-                tmp.lu = LUDICT.getid(NOTALABEL)
-                tmp.lupos = LUPOSDICT.getid(NOTALABEL)
-                tmp.frame = FRAMEDICT.getid(NOTALABEL)
-            mystr += tmp.get_str()
-        return mystr
+                field.is_pred = False
+                field.lu = LUDICT.getid(NOTALABEL)
+                field.lupos = LUPOSDICT.getid(NOTALABEL)
+                field.frame = FRAMEDICT.getid(NOTALABEL)
+            new_conll_str += field.get_str()
+        return new_conll_str
 
-    def get_newstr_lu(self, targetpred):  # after substituting predicted LU
-        mystr = ""
+    def get_predicted_target_conll(self, predicted_target, predicted_lu):
+        """
+        Get new CoNLL string, after substituting predicted target.
+        """
+        new_conll_str = ""
         for e in xrange(len(self._elements)):
-            tmp = deepcopy(self._elements[e])
-            if (tmp.id - 1) in targetpred:
-                tmp.is_pred = True
-                tmp.lu = targetpred[tmp.id - 1][0]
-                tmp.lupos = targetpred[tmp.id - 1][0]
+            field = deepcopy(self._elements[e])
+            if (field.id - 1) == predicted_target:
+                field.is_pred = True
+                field.lu = predicted_lu.id
+                field.lupos = predicted_lu.posid
             else:
-                tmp.is_pred = False
-                tmp.lu = LUDICT.getid(NOTALABEL)
-                tmp.lupos = LUPOSDICT.getid(NOTALABEL)
-            mystr += tmp.get_str()
-        return mystr
+                field.is_pred = False
+                field.lu = LUDICT.getid(NOTALABEL)
+                field.lupos = LUPOSDICT.getid(NOTALABEL)
+            field.frame = FRAMEDICT.getid(NOTALABEL)
+            new_conll_str += field.get_str(no_args=True)
+        return new_conll_str
 
     # def get_newstr_fe(self, targetfes): # after substituting predicted FEs
     #     mystr = ""
