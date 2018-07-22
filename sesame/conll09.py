@@ -15,15 +15,17 @@ CLABELDICT = FspDict()
 
 
 class CoNLL09Element:
-    """ all the elements in a single line of a CoNLL 2009 file"""
+    """
+    All the elements in a single line of a CoNLL 2009-like file.
+    """
 
-    def __init__(self, conll_line, read_depsyn):
+    def __init__(self, conll_line, read_depsyn=None):
         ele = conll_line.split("\t")
         lufields = ['_', '_']
         self.id = int(ele[0])
         self.form = VOCDICT.addstr(ele[1].lower())
         self.nltk_lemma = LEMDICT.addstr(ele[3])
-        self.fn_pos = ele[4]  # not really a gold POS tag, just one provided by FrameNet, ignore
+        self.fn_pos = ele[4]  # Not a gold POS tag, provided by taggers used in FrameNet, ignore.
         self.nltk_pos = POSDICT.addstr(ele[5])
         self.sent_num = int(ele[6])
 
@@ -73,7 +75,7 @@ class CoNLL09Element:
                 rolelabel = INV_ARGTYPES[self.argtype] + "\t"
 
         if no_args:  # For Target ID / Frame ID predictions
-            rolelabel = "_\t"
+            rolelabel = "O\t"
 
         if DEBUGMODE:
             return idstr + form + lu + frame + rolelabel

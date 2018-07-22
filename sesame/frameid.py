@@ -7,15 +7,17 @@ from optparse import OptionParser
 from arksemaforeval import *
 from dynet import *
 from evaluation import *
+from raw_data import make_data_instance
 
 
 optpr = OptionParser()
-optpr.add_option("--mode", dest="mode", type='choice', choices=['train', 'test', 'refresh'], default='train')
+optpr.add_option("--mode", dest="mode", type="choice", choices=["train", "test", "refresh", "predict"], default="train")
 optpr.add_option("-n", "--model_name", help="Name of model directory to save model to.")
 optpr.add_option("--nodrop", action="store_true", default=False)
 optpr.add_option("--nowordvec", action="store_true", default=False)
 optpr.add_option("--hier", action="store_true", default=False)
 optpr.add_option("--exemplar", action="store_true", default=False)
+optpr.add_option("--raw_input", type="str", metavar="FILE")
 (options, args) = optpr.parse_args()
 
 model_dir = "logs/{}/".format(options.model_name)
@@ -32,7 +34,7 @@ USE_DROPOUT = not options.nodrop
 USE_WV = not options.nowordvec
 USE_HIER = options.hier
 
-sys.stderr.write("\nCOMMAND: " + ' '.join(sys.argv) + "\n")
+sys.stderr.write("\nCOMMAND: " + " ".join(sys.argv) + "\n")
 sys.stderr.write("\nPARSER SETTINGS\n_____________________\n")
 sys.stderr.write("PARSING MODE:   \t" + options.mode + "\n")
 sys.stderr.write("USING EXEMPLAR? \t" + str(options.exemplar) + "\n")
@@ -42,7 +44,7 @@ sys.stderr.write("USING HIERARCHY?\t" + str(USE_HIER) + "\n")
 if options.mode in ["train", "refresh"]:
     sys.stderr.write("VALIDATED MODEL WILL BE SAVED TO\t{}\n".format(model_file_name))
 else:
-    sys.stderr.write("MODEL USED FOR TEST:\t{}\n".format(model_file_name))
+    sys.stderr.write("MODEL USED FOR TEST / PREDICTION:\t{}\n".format(model_file_name))
 sys.stderr.write("_____________________\n")
 
 UNK_PROB = 0.1
@@ -74,6 +76,7 @@ def find_multitokentargets(examples, split):
                      %(split, multitoktargs*100/tottargs, multitoktargs, tottargs))
 
 trainexamples, m, t = read_conll(train_conll)
+find_multitokentargets(trainexamples, "train")
 
 post_train_lock_dicts()
 lufrmmap, relatedlus = read_related_lus()
@@ -94,18 +97,22 @@ sys.stderr.write("# frames: " + str(FRAMEDICT.size()) + "\n")
 
 if options.mode in ["train", "refresh"]:
     devexamples, m, t = read_conll(DEV_CONLL)
+    find_multitokentargets(devexamples, "dev/test")
     sys.stderr.write("unknowns in dev\n\n_____________________\n")
     out_conll_file = "{}predicted-{}-frameid-dev.conll".format(model_dir, VERSION)
 elif options.mode  == "test":
     devexamples, m, t = read_conll(TEST_CONLL)
+    find_multitokentargets(devexamples, "dev/test")
     sys.stderr.write("unknowns in test\n\n_____________________\n")
     out_conll_file = "{}predicted-{}-frameid-test.conll".format(model_dir, VERSION)
-    fefile = "{}predicted-test.fes".format(model_dir)
+    fefile = "{}predicted-{}-frameid-test.fes".format(model_dir, VERSION)
+elif options.mode == "predict":
+    assert options.raw_input is not None
+    instances, _, _ = read_conll(options.raw_input)
+    out_conll_file = "{}predicted-frames.conll".format(model_dir)
 else:
-    raise Exception("invalid parser mode", options.mode)
+    raise Exception("Invalid parser mode", options.mode)
 
-find_multitokentargets(trainexamples, "train")
-find_multitokentargets(devexamples, "dev/test")
 
 sys.stderr.write("# unseen, unlearnt test words in vocab: " + str(VOCDICT.num_unks()) + "\n")
 sys.stderr.write("# unseen, unlearnt test POS tags: " + str(POSDICT.num_unks()) + "\n")
@@ -356,10 +363,21 @@ elif options.mode == "test":
         testr, testtp, testtp + testfp,
         testf))
 
-    sys.stderr.write("printing output conll to " + out_conll_file + " ... ")
+    sys.stderr.write("Printing output conll to " + out_conll_file + " ... ")
     print_as_conll(devexamples, testpredictions)
-    sys.stderr.write("done!\n")
+    sys.stderr.write("Done!\n")
 
-    sys.stderr.write("printing frame-elements to " + fefile + " ...\n")
+    sys.stderr.write("Printing frame-elements to " + fefile + " ...\n")
     convert_conll_to_frame_elements(out_conll_file, fefile)
-    sys.stderr.write("done!\n")
+    sys.stderr.write("Done!\n")
+
+elif options.mode == "predict":
+    model.populate(model_file_name)
+
+    predictions = []
+    for instance in instances:
+        _, prediction = identify_frames(builders, instance.tokens, instance.postags, instance.lu, instance.targetframedict.keys())
+        predictions.append(prediction)
+    sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
+    print_as_conll(instances, predictions)
+    sys.stderr.write("Done!\n")

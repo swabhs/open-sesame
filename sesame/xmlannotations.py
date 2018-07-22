@@ -1,7 +1,9 @@
+import nltk
 import sys
-from nltk import pos_tag
-from nltk.stem import WordNetLemmatizer
-lemmatizer = WordNetLemmatizer()
+
+from globalconfig import NOTALABEL
+
+lemmatizer = nltk.stem.WordNetLemmatizer()
 
 class SentAnno:
 
@@ -48,7 +50,7 @@ class SentAnno:
             self.tokens.append(token)
             idx += 1
         try:
-            self.nltkpostags = [ele[1] for ele in pos_tag(self.tokens)]
+            self.nltkpostags = [ele[1] for ele in nltk.pos_tag(self.tokens)]
             for idx in xrange(len(self.tokens)):
                 tok = self.tokens[idx]
                 if self.nltkpostags[idx].startswith("V"):
@@ -57,7 +59,7 @@ class SentAnno:
                     self.nltklemmas.append(lemmatizer.lemmatize(tok))
         except IndexError:
             print self.tokens
-            print pos_tag(self.tokens)
+            print nltk.pos_tag(self.tokens)
         return True
 
     def get_tokens_by_offset(self, startend):

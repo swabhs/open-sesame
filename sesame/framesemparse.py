@@ -73,7 +73,7 @@ class FrameSemParse(object):
         self.tokens = sentence.tokens
         self.postags = sentence.postags
         self.lemmas = sentence.lemmas
-        # TODO: clunky, there should be some inheritance, etc.
+        # TODO(Swabha): clunky, there should be some inheritance, etc.
         self.sentence = sentence
         self.targetframedict = {}  # map of target position and frame-id
         self.frame = None
@@ -93,12 +93,12 @@ class FrameSemParse(object):
             print "LexUnit: ", ludict.getstr(t.id)
             print "Frame: ", f.get_str(framedict),
         print
-        for fe in self.fes:
-            print "FE:", fedict.getstr(fe.id),
-            for span in self.fes[fe]:
-                for pos in span:
-                    print vocdict.getstr(self.tokens[pos])
-        print
+        # for fe in self.fes:
+        #     print "FE:", fedict.getstr(fe.id),
+        #     for span in self.fes[fe]:
+        #         for pos in span:
+        #             print vocdict.getstr(self.tokens[pos])
+        # print
 
     def add_target(self, targetpos, luid, lupos, frameid):
         if not self.modifiable:

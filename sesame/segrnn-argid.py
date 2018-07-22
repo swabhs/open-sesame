@@ -3,17 +3,19 @@ import math
 import os
 import sys
 import time
+from dynet import *
 from optparse import OptionParser
 
 from arksemaforeval import *
 from evaluation import *
 from discreteargidfeats import *
-from dynet import *
+from raw_data import make_data_instance
+
 
 
 optpr = OptionParser()
 optpr.add_option("--testf", dest="test_conll", help="Annotated CoNLL test file", metavar="FILE", default=TEST_CONLL)
-optpr.add_option("--mode", dest="mode", type='choice', choices=['train', 'test', 'refresh', 'ensemble'],
+optpr.add_option("--mode", dest="mode", type='choice', choices=['train', 'test', 'refresh', 'ensemble', 'predict'],
                  default='train')
 optpr.add_option("--saveensemble", action="store_true", default=False)
 optpr.add_option("-n", "--model_name", help="Name of model directory to save model to.")
@@ -27,8 +29,8 @@ optpr.add_option("--wordvec", action="store_true", default=True)
 optpr.add_option("--hier", action="store_true", default=False)
 optpr.add_option("--syn", type='choice', choices=['dep', 'constit', 'none'], default='none')
 optpr.add_option("--ptb", action="store_true", default=False)
-optpr.add_option("--fefile", help="output frame element file for semafor eval", metavar="FILE",
-                 default="my.test.predict.sentences.frame.elements")
+optpr.add_option("--fefile", help="output frame element file for semafor eval", metavar="FILE")
+optpr.add_option("--raw_input", type="str", metavar="FILE")
 (options, args) = optpr.parse_args()
 
 model_dir = "logs/{}/".format(options.model_name)
@@ -83,7 +85,7 @@ sys.stderr.write("USING PTB-CLOSS?\t" + str(USE_PTB_CONSTITS) + "\n")
 if options.mode in ["train", "refresh"]:
     sys.stderr.write("VALIDATED MODEL WILL BE SAVED TO\t%s\n" % model_file_name)
 if options.mode == "test":
-    sys.stderr.write("MODEL USED FOR TEST:\t{}\n".format(model_file_name))
+    sys.stderr.write("MODEL USED FOR TEST / PREDICTION:\t{}\n".format(model_file_name))
     sys.stderr.write("SAVING ENSEMBLE?\t" + str(SAVE_FOR_ENSEMBLE) + "\n")
 sys.stderr.write("_____________________\n")
 
@@ -123,11 +125,11 @@ sys.stderr.write("# constituency labels:  " + str(CLABELDICT.size()) + "\n")
 
 trainexamples = filter_long_ex(trainexamples, USE_SPAN_CLIP, ALLOWED_SPANLEN, NOTANFEID)
 
-if options.mode in ['train', 'refresh']:
+if options.mode in ["train", "refresh"]:
     devexamples, _, _ = read_conll(DEV_CONLL, options.syn)
     sys.stderr.write("unknowns in dev\n\n_____________________\n")
     out_conll_file = "{}predicted-{}-argid-dev.conll".format(model_dir, VERSION)
-else:
+elif options.mode in ["test", "ensemble"]:
     devexamples, _, _ = read_conll(options.test_conll, options.syn)
     sys.stderr.write("unknowns in test\n\n_____________________\n")
     out_conll_file = "{}predicted-{}-argid-test.conll".format(model_dir, VERSION)
@@ -136,6 +138,12 @@ else:
         out_ens_file = "{}ensemble.{}".format(model_dir, out_conll_file.split("/")[-1][:-11])
     if options.mode == "ensemble":
         in_ens_file = "{}full-ensemble-{}".format(model_dir, out_conll_file.split("/")[-1][:-11])
+elif options.mode == "predict":
+    assert options.raw_input is not None
+    instances, _, _ = read_conll(options.raw_input)
+    out_conll_file = "{}predicted-args.conll".format(model_dir)
+else:
+    raise Exception("Invalid parser mode", options.mode)
 
 sys.stderr.write("# unseen, unlearnt test words in vocab: " + str(VOCDICT.num_unks()) + "\n")
 sys.stderr.write("# unseen, unlearnt test POS tags:       " + str(POSDICT.num_unks()) + "\n")
@@ -1034,3 +1042,16 @@ elif options.mode == "test":
     sys.stderr.write("printing frame-elements to " + options.fefile + " ...\n")
     convert_conll_to_frame_elements(out_conll_file, options.fefile)
     sys.stderr.write("done!\n")
+
+elif options.mode == "predict":
+    model.populate(model_file_name)
+
+    predictions = []
+    for instance in instances:
+        prediction = identify_fes(instance.tokens,
+                                     instance.sentence,
+                                     instance.targetframedict)
+        predictions.append(prediction)
+    sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
+    print_as_conll(instances, predictions)
+    sys.stderr.write("Done!\n")

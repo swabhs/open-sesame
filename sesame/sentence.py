@@ -6,7 +6,7 @@ class Sentence(object):
     """tokens and pos tags for each example sentence.
     The same sentence can be associated with multiple frame-semantic parses"""
 
-    # TODO add inheritance for constit sentence vs dep sentence
+    # TODO(Swabha): add inheritance for constit sentence vs dep sentence
     def __init__(self, syn_type, elements=None, tokens=None, postags=None, lemmas=None, sentnum=None):
         if elements:
             self.sent_num = elements[0].sent_num
@@ -104,8 +104,6 @@ class Sentence(object):
             for i in xrange(j + 1):
                 self.shortest_paths[(i, j, target)] = frozenset(
                     self.get_shortest_path_in_span(target, (i, j)))
-                # print "num shortest paths:", len(set(self.shortest_paths.values())),
-                # "num spans:", len(self.shortest_paths)
 
     def get_shortest_path_in_span(self, target, span):
         splen = len(self.tokens) + 1
@@ -126,12 +124,12 @@ class Sentence(object):
         if len(cparse.leaves()) != len(self.tokens):
             raise Exception("sentences do not line up!")
 
-        # replacing leaves with node-ids
+        # Replace leaves with node-ids.
         idx = 0
         for pos in self.cparse.treepositions('leaves'):
             self.cparse[pos] = idx
             idx += 1
-        # replacing internal nodes with node-ids
+        # Replace internal nodes with node-ids.
         for st in self.cparse.subtrees():
             # if x[0] in parentedp.leaves(): continue
             self.idxlabelmap[idx] = clabeldict.addstr(st.label())
@@ -141,7 +139,7 @@ class Sentence(object):
 
         if not learn_features:
             return
-        # get stuff for constit features
+        # Get stuff for constit features.
         self.leafnodes = [k for k in self.cparse.subtrees(
             lambda t: t.height() == 2)]
         for a in xrange(len(self.leafnodes)):
@@ -149,7 +147,7 @@ class Sentence(object):
                 raise Exception("order mixup!")
         self.get_cpath_to_root()
 
-        # get all lowest common ancestors
+        # Get all lowest common ancestors.
         for j in xrange(len(self.leafnodes)):
             for k in xrange(j, len(self.leafnodes)):
                 lca, lcaid = self.get_lca(self.leafnodes[j], self.leafnodes[k])
@@ -181,10 +179,6 @@ class Sentence(object):
     def get_lca(self, src, dest):
         if src == dest:
             return src, self.idxlabelmap[src.label()]
-        #
-        # print self.crootpaths.keys()
-        # print src.label()
-        # print self.cparse.root.label()
         pathfrom = self.crootpaths[src.label()][::-1]
         pathto = self.crootpaths[dest.label()][::-1]
         common = 0

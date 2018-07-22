@@ -7,14 +7,15 @@ from optparse import OptionParser
 from arksemaforeval import *
 from dynet import *
 from evaluation import *
+from raw_data import make_data_instance
 
 
 optpr = OptionParser()
-optpr.add_option("--mode", dest="mode", type="choice", choices=["train", "test", "refresh"], default="train")
+optpr.add_option("--mode", dest="mode", type="choice", choices=["train", "test", "refresh", "predict"], default="train")
 optpr.add_option("-n", "--model_name", help="Name of model directory to save model to.")
-optpr.add_option("--raw", action="store_true", default=False)
 optpr.add_option("--nodrop", action="store_true", default=False)
 optpr.add_option("--nowordvec", action="store_true", default=False)
+optpr.add_option("--raw_input", type="str", metavar="FILE")
 (options, args) = optpr.parse_args()
 
 model_dir = "logs/{}/".format(options.model_name)
@@ -37,7 +38,7 @@ sys.stderr.write("USING WORDVECS? \t" + str(USE_WV) + "\n")
 if options.mode in ["train", "refresh"]:
     sys.stderr.write("VALIDATED MODEL WILL BE SAVED TO\t{}\n".format(model_file_name))
 else:
-    sys.stderr.write("MODEL USED FOR TEST:\t{}\n".format(model_file_name))
+    sys.stderr.write("MODEL USED FOR TEST / PREDICTION:\t{}\n".format(model_file_name))
 sys.stderr.write("_____________________\n")
 
 UNK_PROB = 0.1
@@ -102,6 +103,11 @@ elif options.mode  == "test":
     combined_dev = combine_examples(dev_examples)
     sys.stderr.write("unknowns in test\n\n_____________________\n")
     out_conll_file = "{}predicted-{}-targetid-test.conll".format(model_dir, VERSION)
+elif options.mode == "predict":
+    assert options.raw_input is not None
+    with open(options.raw_input, "r") as fin:
+        instances = [make_data_instance(line, i) for i,line in enumerate(fin)]
+    out_conll_file = "{}predicted-targets.conll".format(model_dir)
 else:
     raise Exception("invalid parser mode", options.mode)
 
@@ -388,4 +394,15 @@ elif options.mode == "test":
 
     sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
     print_as_conll(combined_dev, test_predictions)
+    sys.stderr.write("Done!\n")
+
+elif options.mode == "predict":
+    model.populate(model_file_name)
+
+    predictions = []
+    for instance in instances:
+        _, prediction = identify_targets(builders, instance.tokens, instance.postags, instance.lemmas)
+        predictions.append(prediction)
+    sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
+    print_as_conll(instances, predictions)
     sys.stderr.write("Done!\n")
