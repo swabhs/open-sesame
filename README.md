@@ -72,8 +72,8 @@ For predicting targets, frames and arguments on unannotated data, pretrained mod
 
 ```sh
 python sesame.targetid --model_name pretrained-targetid --mode predict --raw_input sentences.txt
-python sesame.frameid --model_name pretrained-frameid --mode predict --raw_input logs/targetid-model/predicted-targets.conll
-python sesame.segrnn-argid --model_name pretrained-argid --mode predict --raw_input logs/frameid-model/predicted-frames.conll
+python sesame.frameid --model_name pretrained-frameid --mode predict --raw_input logs/pretrained-targetid/predicted-targets.conll
+python sesame.segrnn-argid --model_name pretrained-argid --mode predict --raw_input logs/pretrained-frameid/predicted-frames.conll
 ```
 
 The resulting frame-semantic parses will be written to `logs/pretrained-argid/predicted-args.conll` in the same CoNLL 2009-like format.
