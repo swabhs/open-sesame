@@ -22,7 +22,7 @@ This codebase only handles data in the XML format specified under FrameNet. Howe
 
 2. Convert the data into a [format similar to CoNLL 2009](https://ufal.mff.cuni.cz/conll2009-st/task-description.html), but with BIO tags, by executing:
 ```sh
-python -m src.preprocess glove.6B.100d.txt 2> err
+python -m sesame.preprocess glove.6B.100d.txt 2> err
 ```
 The above script writes the train, dev and test files in the required format into the `data/neural/fn1.x/` directory. There is plenty of noise in the annotations. The annotations which could not be used, along with the error messages, gets spit out to the standard error. Also trims the GloVe files to the FrameNet vocabulary, to ease memory requirements. For example, the above creates `data/glove.6B.100d.framevocab.txt` to be used by our models.
 
@@ -32,7 +32,7 @@ The above script writes the train, dev and test files in the required format int
 Here, we briefly describe the training for each module. The different modules are target identification, frame identification and argument identification, which *need to be executed in that order*. To train a module, execute:
 
 ```sh
-python -m src.`MODULE` --model_name sample-model --mode train
+python -m sesame.`MODULE` --model_name sample-model --mode train
 ```
 
 The `MODULE`s are specified below. Training saves the best model on validation data in the directory `logs/sample-model/best-MODULE-1.x-model`. Pre-trained models coming soon.
@@ -43,7 +43,7 @@ If training gets interrupted, you can restart from the last saved checkpoint by 
 To test under the above model, execute:
 
 ```sh
-python -m src.`MODULE` --model_name sample-model --mode test
+python -m sesame.`MODULE` --model_name sample-model --mode test
 ```
 
 The output, in a CoNLL 2009-like format will be written to `logs/sample-model/predicted-1.x-MODULE-test.conll` and in the [frame-elements file format](https://github.com/Noahs-ARK/semafor/tree/master/training/data) to `logs/sample-model/predicted-test.fes` for frame and argument identification.
@@ -58,14 +58,13 @@ A bidirectional LSTM model takes into account the lexical unit index in FrameNet
 
 `MODULE=frameid`
 
-Frame identification is based on a bidirectional LSTM model. Targets and their respective lexical units need to be identified before this step. 
-At test time, the module spits out `frameid.log` containing example-wise analysis.
+Frame identification is based on a bidirectional LSTM model. Targets and their respective lexical units need to be identified before this step. At test time, the module spits out example-wise analysis to the command line.
 
 ### 3. Argument (Frame-Element) Identification
 
 `MODULE=segrnn-argid`
 
-Argument identification is based on a segmental recurrent neural net, used as the *baseline* in [our paper](https://arxiv.org/abs/1706.09528). Targets and their respective lexical units need to be identified, and frames corresponding to the LUs predicted before this step.
+Argument identification is based on a segmental recurrent neural net, used as the *baseline* in [our paper](https://arxiv.org/abs/1706.09528). Targets and their respective lexical units need to be identified, and frames corresponding to the LUs predicted before this step. At test time, the module spits out example-wise analysis to the command line.
 
 ## Contact and Reference
 
@@ -79,4 +78,3 @@ For questions and usage issues, please contact `swabha@cs.cmu.edu`. If you use o
   year={2017}
 }
 ```
-
