@@ -1,26 +1,22 @@
 # -*- coding: utf-8 -*-
-from evaluation import *
-from discreteargidfeats import *
-from dynet import *
-from arksemaforeval import *
-from optparse import OptionParser
-
+import math
 import os
 import sys
 import time
-import math
+from optparse import OptionParser
 
-MODELSYMLINK = "model.segrnn-argid." + VERSION
-if not os.path.exists('tmp/'):
-    os.makedirs('tmp/')
-modelfname = "tmp/" + VERSION + "model.sra-" + str(time.time())
+from arksemaforeval import *
+from evaluation import *
+from discreteargidfeats import *
+from dynet import *
+
 
 optpr = OptionParser()
 optpr.add_option("--testf", dest="test_conll", help="Annotated CoNLL test file", metavar="FILE", default=TEST_CONLL)
 optpr.add_option("--mode", dest="mode", type='choice', choices=['train', 'test', 'refresh', 'ensemble'],
                  default='train')
-optpr.add_option("--saveensemble", action="store_true", default=True)
-optpr.add_option('--model', dest="modelfile", help="Saved model file", metavar="FILE", default=MODELSYMLINK)
+optpr.add_option("--saveensemble", action="store_true", default=False)
+optpr.add_option("-n", "--model_name", help="Name of model directory to save model to.")
 optpr.add_option("--exemplar", action="store_true", default=False)
 optpr.add_option("--spanlen", type='choice', choices=['clip', 'filter'], default='clip')
 optpr.add_option('--loss', type='choice', choices=['log', 'softmaxm', 'hinge'], default='softmaxm')
@@ -33,8 +29,13 @@ optpr.add_option("--syn", type='choice', choices=['dep', 'constit', 'none'], def
 optpr.add_option("--ptb", action="store_true", default=False)
 optpr.add_option("--fefile", help="output frame element file for semafor eval", metavar="FILE",
                  default="my.test.predict.sentences.frame.elements")
-
 (options, args) = optpr.parse_args()
+
+model_dir = "logs/{}/".format(options.model_name)
+model_file_name = "{}best-argid-{}-model".format(model_dir, VERSION)
+if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
+
 if options.exemplar:
     train_conll = TRAIN_EXEMPLAR
     # TODO: we still don't have exemplar constituent parses
@@ -80,8 +81,9 @@ sys.stderr.write("USING C-SYNTAX? \t" + str(USE_CONSTITS) + "\n")
 sys.stderr.write("USING PTB-CLOSS?\t" + str(USE_PTB_CONSTITS) + "\n")
 
 if options.mode in ["train", "refresh"]:
-    sys.stderr.write("MODEL WILL BE SAVED TO\t%s\n" % modelfname)
+    sys.stderr.write("VALIDATED MODEL WILL BE SAVED TO\t%s\n" % model_file_name)
 if options.mode == "test":
+    sys.stderr.write("MODEL USED FOR TEST:\t{}\n".format(model_file_name))
     sys.stderr.write("SAVING ENSEMBLE?\t" + str(SAVE_FOR_ENSEMBLE) + "\n")
 sys.stderr.write("_____________________\n")
 
@@ -124,15 +126,16 @@ trainexamples = filter_long_ex(trainexamples, USE_SPAN_CLIP, ALLOWED_SPANLEN, NO
 if options.mode in ['train', 'refresh']:
     devexamples, _, _ = read_conll(DEV_CONLL, options.syn)
     sys.stderr.write("unknowns in dev\n\n_____________________\n")
-    out_conll_file = "argid.predicted.fn" + VERSION + ".dev.conll"
+    out_conll_file = "{}predicted-{}-argid-dev.conll".format(model_dir, VERSION)
 else:
     devexamples, _, _ = read_conll(options.test_conll, options.syn)
     sys.stderr.write("unknowns in test\n\n_____________________\n")
-    out_conll_file = "argid.predicted." + options.test_conll.split("/")[-1]
+    out_conll_file = "{}predicted-{}-argid-test.conll".format(model_dir, VERSION)
+    fefile = "{}predicted-test.fes".format(model_dir)
     if SAVE_FOR_ENSEMBLE:
-        out_ens_file = "ensemble." + out_conll_file[:-11]
+        out_ens_file = "{}ensemble.{}".format(model_dir, out_conll_file.split("/")[-1][:-11])
     if options.mode == "ensemble":
-        in_ens_file = "full_ensemble." +  out_conll_file[:-11]
+        in_ens_file = "{}full-ensemble-{}".format(model_dir, out_conll_file.split("/")[-1][:-11])
 
 sys.stderr.write("# unseen, unlearnt test words in vocab: " + str(VOCDICT.num_unks()) + "\n")
 sys.stderr.write("# unseen, unlearnt test POS tags:       " + str(POSDICT.num_unks()) + "\n")
@@ -847,7 +850,7 @@ def identify_spans(unkdtoks, sentence, goldspans):
     return get_constit_loss(fws, bws, goldspans)
 
 
-def print_result(golds, pred_targmaps):
+def print_as_conll(golds, pred_targmaps):
     with codecs.open(out_conll_file, "w", "utf-8") as f:
         for gold, pred in zip(golds, pred_targmaps):
             result = gold.get_str(predictedfes=pred)
@@ -883,12 +886,19 @@ LOSS_EVAL_EPOCH = 100
 DEV_EVAL_EPOCHS = 10 * LOSS_EVAL_EPOCH
 
 if options.mode in ['test', 'refresh']:
-    sys.stderr.write("reusing " + options.modelfile + "...\n")
-    model.populate(options.modelfile)
+    sys.stderr.write("Reusing model from {} ...\n".format(model_file_name))
+    model.populate(model_file_name)
+
+best_dev_f1 = 0.0
+if options.mode in ["refresh"]:  
+    with open(os.path.join(model_dir, "best-dev-f1.txt"), "r") as fin:
+        for line in fin:
+            best_dev_f1 = float(line.strip())
+    fin.close()
+    sys.stderr.write("Best dev F1 so far = %.4f\n" % best_dev_f1)
 
 if options.mode in ['train', 'refresh']:
     tagged = loss = 0.0
-    bestdevf = 0.0
 
     if USE_PTB_CONSTITS:
         trainexamples = trainexamples + ptbexamples
@@ -954,17 +964,16 @@ if options.mode in ['train', 'refresh']:
                                  "[dev epoch=%d after=%d] lprec = %.5f lrec = %.5f lf1 = %.5f"
                                  % (epoch, idx, wp, wr, wf, epoch, idx, up, ur, uf, epoch, idx, lp, lr, lf))
 
-                if lf > bestdevf:
-                    bestdevf = lf
-                    print_result(devexamples, predictions)
-                    sys.stderr.write(" -- saving")
+                if lf > best_dev_f1:
+                    best_dev_f1 = lf
+                    with open(os.path.join(model_dir, "best-dev-f1.txt"), "w") as fout:
+                        fout.write("{}\n".format(best_dev_f1))
 
-                    model.save(modelfname)
-                    os.symlink(modelfname, "tmp.link")
-                    os.rename("tmp.link", MODELSYMLINK)
+                    print_as_conll(devexamples, predictions)
+                    sys.stderr.write(" -- saving to {}".format(model_file_name))
+                    model.save(model_file_name)
                 sys.stderr.write(" [took %.3f s]\n" % (time.time() - devstarttime))
                 starttime = time.time()
-        adam.update_epoch(1.0)
 
 elif options.mode == "ensemble":
     exfs = {x: {} for x in xrange(len(devexamples))}
@@ -992,7 +1001,7 @@ elif options.mode == "ensemble":
 
     sys.stderr.write(" [took %.3f s]\n" % (time.time() - teststarttime))
     sys.stderr.write("printing output conll to " + out_conll_file + " ... ")
-    print_result(devexamples, testpredictions)
+    print_as_conll(devexamples, testpredictions)
     sys.stderr.write("done!\n")
     print_eval_result(devexamples, testpredictions)
     sys.stderr.write("printing frame-elements to " + options.fefile + " ...\n")
@@ -1019,7 +1028,7 @@ elif options.mode == "test":
 
     sys.stderr.write(" [took %.3f s]\n" % (time.time() - teststarttime))
     sys.stderr.write("printing output conll to " + out_conll_file + " ... ")
-    print_result(devexamples, testpredictions)
+    print_as_conll(devexamples, testpredictions)
     sys.stderr.write("done!\n")
     print_eval_result(devexamples, testpredictions)
     sys.stderr.write("printing frame-elements to " + options.fefile + " ...\n")

@@ -4,6 +4,7 @@ dataanalysis.py
 *.conll
 *.frame.elements
 model.*
+logs/
 *.txt
 *tmp
 *err

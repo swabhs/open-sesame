@@ -1,4 +1,4 @@
-#!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 '''
 Reads xml files containing FrameNet 1.x LUs, and converts them to CoNLL format
@@ -32,6 +32,7 @@ ns = {'fn' : 'http://framenet.icsi.berkeley.edu'}
 firsts = {trainf:True, devf:True, testf:True, ftetrainf:True}
 sizes = {trainf:0, devf:0, testf:0, ftetrainf:0}
 
+
 def write_to_conll(outf, fsp, firstex, sentid):
     mode = "a"
     if firstex:
@@ -54,6 +55,7 @@ def write_to_conll(outf, fsp, firstex, sentid):
         outf.write("\n") # end of sentence
         outf.close()
 
+
 def write_to_sent_file(outsentf, sentence, isfirstsent):
     mode = "a"
     if isfirstsent: mode = "w"
@@ -61,6 +63,7 @@ def write_to_sent_file(outsentf, sentence, isfirstsent):
     with codecs.open(outsentf, mode, "utf-8") as outf:
         outf.write(sentence + "\n") # end of sentence
         outf.close()
+
 
 def process_xml_labels(label, layertype):
     try:
@@ -70,6 +73,7 @@ def process_xml_labels(label, layertype):
         sys.stderr.write("\t\tIssue: start and/or end labels missing in " + layertype + "\n")
         return
     return (st, en)
+
 
 def process_sent(sent, outsentf, isfirstsent):
     senttext = ""
@@ -99,6 +103,7 @@ def process_sent(sent, outsentf, isfirstsent):
         sys.stderr.write("\t\tSkipping: missing POS tags and hence tokenization\n")
         return
     return sentann
+
 
 def get_all_fsps_in_sent(sent, sentann, fspno, lex_unit, frame, isfulltextann, corpus):
     numannosets = 0
@@ -162,6 +167,7 @@ def get_all_fsps_in_sent(sent, sentann, fspno, lex_unit, frame, isfulltextann, c
 
     return numannosets, fspno, fsps
 
+
 def get_annoids(filelist, outf, outsentf):
     annos = []
     isfirstex = True
@@ -219,6 +225,7 @@ def get_annoids(filelist, outf, outsentf):
     sys.stdout.write("# annotations           = %d\n" %totfsps)
     return annos
 
+
 def process_fulltext():
     sys.stdout.write("\nReading fulltext data...\n")
 
@@ -242,6 +249,7 @@ def process_fulltext():
     get_annoids(train_fte_files, ftetrainf, ftetrainsentf)
 
     return dev_annos, test_annos
+
 
 def process_lu_xml(lufname, dev_annos, test_annos):
     global totsents, numsentsreused, fspno, numlus, isfirst, isfirstsent
@@ -286,6 +294,7 @@ def process_lu_xml(lufname, dev_annos, test_annos):
     sys.stderr.write(lufname + ": total sents = " + str(sentno) + "\n")
     totsents += sentno
 
+
 def process_exemplars(dev_annos, test_annos):
     global totsents, numsentsreused, fspno, numlus, isfirst
     # get the names of all LU xml files
@@ -315,6 +324,7 @@ def process_exemplars(dev_annos, test_annos):
     for s in sizes:
         sys.stdout.write(s + ":\t" + str(sizes[s]) + "\n")
     sys.stdout.write("\n")
+
 
 def preprocess_wvf(ws):
     """
@@ -346,6 +356,7 @@ def preprocess_wvf(ws):
         wvf.close()
         filtered_wvf.close()
         sys.stdout.write("\ntotal num word vectors in file " + newwvf + " = " + str(numwv) + "\n")
+
 
 dev, test = process_fulltext()
 

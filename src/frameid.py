@@ -8,21 +8,20 @@ from arksemaforeval import *
 from dynet import *
 from evaluation import *
 
-MODELSYMLINK = "model.frameid." + VERSION
-if not os.path.exists('tmp/'):
-    os.makedirs('tmp/')
-modelfname = "tmp/" + VERSION  + "model-" + str(time.time())
 
-# TODO(swabha) use optparse
 optpr = OptionParser()
 optpr.add_option("--mode", dest="mode", type='choice', choices=['train', 'test', 'refresh'], default='train')
-optpr.add_option('--model', dest="modelfile", help="Saved model file", metavar="FILE", default=MODELSYMLINK)
+optpr.add_option("-n", "--model_name", help="Name of model directory to save model to.")
 optpr.add_option("--nodrop", action="store_true", default=False)
 optpr.add_option("--nowordvec", action="store_true", default=False)
 optpr.add_option("--hier", action="store_true", default=False)
 optpr.add_option("--exemplar", action="store_true", default=False)
-
 (options, args) = optpr.parse_args()
+
+model_dir = "logs/{}/".format(options.model_name)
+model_file_name = "{}best-frameid-{}-model".format(model_dir, VERSION)
+if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
 
 if options.exemplar:
     train_conll = TRAIN_EXEMPLAR
@@ -41,7 +40,9 @@ sys.stderr.write("USING DROPOUT?  \t" + str(USE_DROPOUT) + "\n")
 sys.stderr.write("USING WORDVECS? \t" + str(USE_WV) + "\n")
 sys.stderr.write("USING HIERARCHY?\t" + str(USE_HIER) + "\n")
 if options.mode in ["train", "refresh"]:
-    sys.stderr.write("MODEL WILL BE SAVED TO\t%s\n" %modelfname)
+    sys.stderr.write("VALIDATED MODEL WILL BE SAVED TO\t{}\n".format(model_file_name))
+else:
+    sys.stderr.write("MODEL USED FOR TEST:\t{}\n".format(model_file_name))
 sys.stderr.write("_____________________\n")
 
 UNK_PROB = 0.1
@@ -94,12 +95,12 @@ sys.stderr.write("# frames: " + str(FRAMEDICT.size()) + "\n")
 if options.mode in ["train", "refresh"]:
     devexamples, m, t = read_conll(DEV_CONLL)
     sys.stderr.write("unknowns in dev\n\n_____________________\n")
-    out_conll_file = "predicted." + VERSION + ".frameid.dev.out"
+    out_conll_file = "{}predicted-{}-frameid-dev.conll".format(model_dir, VERSION)
 elif options.mode  == "test":
     devexamples, m, t = read_conll(TEST_CONLL)
     sys.stderr.write("unknowns in test\n\n_____________________\n")
-    out_conll_file = "predicted." + VERSION + ".frameid.test.out"
-    fefile = "my.predict.test.frame.elements"
+    out_conll_file = "{}predicted-{}-frameid-test.conll".format(model_dir, VERSION)
+    fefile = "{}predicted-test.fes".format(model_dir)
 else:
     raise Exception("invalid parser mode", options.mode)
 
@@ -213,7 +214,7 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
     objective = -esum(losses) if losses else None
     return objective, prediction
 
-def print_result(goldexamples, pred_targmaps):
+def print_as_conll(goldexamples, pred_targmaps):
     with codecs.open(out_conll_file, "w", "utf-8") as f:
         for g,p in zip(goldexamples, pred_targmaps):
             result = g.get_predicted_frame_conll(p) + "\n"
@@ -228,9 +229,18 @@ if options.exemplar:
 EVAL_EVERY_EPOCH = 100
 DEV_EVAL_EPOCH = 5 * EVAL_EVERY_EPOCH
 
+best_dev_f1 = 0.0
+if options.mode in ["refresh"]:
+    sys.stderr.write("Reusing model from {} ...\n".format(model_file_name))
+    model.populate(model_file_name)
+    with open(os.path.join(model_dir, "best-dev-f1.txt"), "r") as fin:
+        for line in fin:
+            best_dev_f1 = float(line.strip())
+    fin.close()
+    sys.stderr.write("Best dev F1 so far = %.4f\n" % best_dev_f1)
+
 if options.mode in ["train", "refresh"]:
     tagged = loss = 0.0
-    bestdevf = 0.0
 
     for epoch in xrange(NUMEPOCHS):
         random.shuffle(trainexamples)
@@ -275,19 +285,18 @@ if options.mode in ["train", "refresh"]:
                                     devp, devtp, devtp + devfp,
                                     devr, devtp, devtp + devfn,
                                     devf))
-                if devf > bestdevf:
-                    bestdevf = devf
-                    print_result(devexamples, predictions)
-                    sys.stderr.write(" -- saving")
-
-                    model.save(modelfname)
-                    os.symlink(modelfname, "tmp.link")
-                    os.rename("tmp.link", MODELSYMLINK)
+                if devf > best_dev_f1:
+                    best_dev_f1 = devf
+                    with open(os.path.join(model_dir, "best-dev-f1.txt"), "w") as fout:
+                        fout.write("{}\n".format(best_dev_f1))
+    
+                    print_as_conll(devexamples, predictions)
+                    sys.stderr.write(" -- saving to {}".format(model_file_name))
+                    model.save(model_file_name)
                 sys.stderr.write("\n")
-        trainer.update_epoch(1.0)
 
 elif options.mode == "test":
-    model.populate(options.modelfile)
+    model.populate(model_file_name)
     corpus_tpfpfn = [0.0, 0.0, 0.0]
 
     testpredictions = []
@@ -348,7 +357,7 @@ elif options.mode == "test":
         testf))
 
     sys.stderr.write("printing output conll to " + out_conll_file + " ... ")
-    print_result(devexamples, testpredictions)
+    print_as_conll(devexamples, testpredictions)
     sys.stderr.write("done!\n")
 
     sys.stderr.write("printing frame-elements to " + fefile + " ...\n")

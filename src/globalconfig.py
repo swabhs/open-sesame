@@ -18,7 +18,7 @@ INV_ARGTYPES={v:k for k,v in ARGTYPES.iteritems()}
 DEBUGMODE = False
 
 VERSION="1.5"
-DATADIR = "../data/"
+DATADIR = "data/"
 PARSERDATADIR = DATADIR + "neural/fn" + VERSION + "/"
 
 TRAIN_FTE = PARSERDATADIR + "fn" + VERSION + ".fulltext.train.syntaxnet.conll"

@@ -18,79 +18,54 @@ This codebase only handles data in the XML format specified under FrameNet. Howe
 
 1. First, create a `data/` directory here, download FrameNet version 1.x and place it under `data/fndata-1.x/`. Also create a directory `data/neural/fn1.x/` to convert to CoNLL 2009 format.
 
+2. Second, this project uses pretrained [GloVe word embeddings](https://nlp.stanford.edu/projects/glove/). Download and extract them under `data/`.
+
 2. Convert the data into a [format similar to CoNLL 2009](https://ufal.mff.cuni.cz/conll2009-st/task-description.html), but with BIO tags, by executing:
 ```sh
-cd src/
-python preprocess.py 2> err
+python -m src.preprocess glove.6B.100d.txt 2> err
 ```
-The above script writes the train, dev and test files in the required format into the `data/neural/fn1.x/` directory. There is plenty of noise in the annotations. The annotations which could not be used, along with the error messages, gets spit out to the standard error.
+The above script writes the train, dev and test files in the required format into the `data/neural/fn1.x/` directory. There is plenty of noise in the annotations. The annotations which could not be used, along with the error messages, gets spit out to the standard error. Also trims the GloVe files to the FrameNet vocabulary, to ease memory requirements. For example, the above creates `data/glove.6B.100d.framevocab.txt` to be used by our models.
 
-3. [Optional, but highly recommended] If you want to use pretrained [GloVe word embeddings](https://nlp.stanford.edu/projects/glove/), download and extract them under `data/`. Run the preprocessing with an extra argument for the intended GloVe file.
+
+## Training
+
+Here, we briefly describe the training for each module. The different modules are target identification, frame identification and argument identification, which *need to be executed in that order*. To train a module, execute:
 
 ```sh
-python preprocess.py glove.6B.100d.txt 2> err
-``` 
-This trims the GloVe files to the FrameNet vocabulary, to ease memory requirements. For example, the above creates `data/glove.6B.100d.framevocab.txt` to be used by our models.
-
-## Target Identification
-
-A bidirectional LSTM model takes into account the lexical unit index in FrameNet to identify targets. This model is *not* described in the [paper](https://arxiv.org/abs/1706.09528).
-
-#### Training
-To train the target identification module, execute:
-
-```sh
-cd src/
-python targetid.py
-```
-This saves the best model on validation data in the directory `src/tmp/`, which will be pointed to by the symbolic link `src/model.targetid.1.x`. Pre-trained models coming soon.
-
-#### Test
-To test under the best model in `src/model.targetid.1.x`, execute:
-
-```sh
-python targetid.py --mode test
+python -m src.`MODULE` --model_name sample-model --mode train
 ```
 
-## Frame Identification
+The `MODULE`s are specified below. Training saves the best model on validation data in the directory `logs/sample-model/best-MODULE-1.x-model`. Pre-trained models coming soon.
 
-Frame identification is based on a bidirectional LSTM model.
+If training gets interrupted, you can restart from the last saved checkpoint by specifying `--mode refresh`.
 
-#### Training
-To train the frame identification module, execute:
-
-```sh
-cd src/
-python frameid.py
-```
-This saves the best model on validation data in the directory `src/tmp/`, which will be pointed to by the symbolic link `src/model.frameid.1.x`. Pre-trained models coming soon.
-
-#### Test
-To test under the best model in `src/model.frameid.1.x`, execute:
+## Test
+To test under the above model, execute:
 
 ```sh
-python frameid.py --mode test > frameid.log
+python -m src.`MODULE` --model_name sample-model --mode test
 ```
-`frameid.log` will contain example-wise analysis. The output, in CoNLL 2009 format will be written to `predicted.1.x.frameid.test.out` and in the [frame-elements file format](https://github.com/Noahs-ARK/semafor/tree/master/training/data) to `my.predict.test.frame.elements`.
 
-## Frame-Element (Argument) Identification
+The output, in a CoNLL 2009-like format will be written to `logs/sample-model/predicted-1.x-MODULE-test.conll` and in the [frame-elements file format](https://github.com/Noahs-ARK/semafor/tree/master/training/data) to `logs/sample-model/predicted-test.fes` for frame and argument identification.
 
-Argument identification is based on a segmental recurrent neural net model, used as a baseline in [our paper](https://arxiv.org/abs/1706.09528).
+### 1. Target Identification
 
-#### Training
-To train an argument identifier, execute:
-```sh
-cd src/
-python segrnn-argid.py 2> err
-```
-This saves the best model on validation data in the directory `src/tmp/`, which will be pointed to by the symbolic link `src/model.segrnn-argid.1.x`. Pre-trained models coming soon.
+`MODULE=targetid`
 
-#### Test
-To test under the best model in `src/model.segrnn-argid.1.x`, execute:
+A bidirectional LSTM model takes into account the lexical unit index in FrameNet to identify targets. This model has *not* been described in the [paper](https://arxiv.org/abs/1706.09528).
 
-```sh
-python segrnn-argid.py --mode test > argid.log
-```
+### 2. Frame Identification
+
+`MODULE=frameid`
+
+Frame identification is based on a bidirectional LSTM model. Targets and their respective lexical units need to be identified before this step. 
+At test time, the module spits out `frameid.log` containing example-wise analysis.
+
+### 3. Argument (Frame-Element) Identification
+
+`MODULE=segrnn-argid`
+
+Argument identification is based on a segmental recurrent neural net, used as the *baseline* in [our paper](https://arxiv.org/abs/1706.09528). Targets and their respective lexical units need to be identified, and frames corresponding to the LUs predicted before this step.
 
 ## Contact and Reference
 

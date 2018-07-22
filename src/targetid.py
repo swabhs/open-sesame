@@ -8,31 +8,36 @@ from arksemaforeval import *
 from dynet import *
 from evaluation import *
 
-MODELSYMLINK = "model.targetid." + VERSION
-if not os.path.exists('tmp/'):
-    os.makedirs('tmp/')
-modelfname = "tmp/" + VERSION  + "model-" + str(time.time())
 
 optpr = OptionParser()
-optpr.add_option("--mode", dest="mode", type='choice', choices=['train', 'test', 'refresh'], default='train')
-optpr.add_option('--model', dest="model_file", help="Saved model file", metavar="FILE", default=MODELSYMLINK)
-optpr.add_option('--raw', action="store_true", default=False)
+optpr.add_option("--mode", dest="mode", type="choice", choices=["train", "test", "refresh"], default="train")
+optpr.add_option("-n", "--model_name", help="Name of model directory to save model to.")
+optpr.add_option("--raw", action="store_true", default=False)
 optpr.add_option("--nodrop", action="store_true", default=False)
 optpr.add_option("--nowordvec", action="store_true", default=False)
 (options, args) = optpr.parse_args()
 
+model_dir = "logs/{}/".format(options.model_name)
+model_file_name = "{}best-targetid-{}-model".format(model_dir, VERSION)
+if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
+
 train_conll = TRAIN_FTE
 
 USE_DROPOUT = not options.nodrop
+if options.mode == "test":
+    USE_DROPOUT = False
 USE_WV = not options.nowordvec
 
-sys.stderr.write("\nCOMMAND: " + ' '.join(sys.argv) + "\n")
+sys.stderr.write("\nCOMMAND: " + " ".join(sys.argv) + "\n")
 sys.stderr.write("\nPARSER SETTINGS\n_____________________\n")
 sys.stderr.write("PARSING MODE:   \t" + options.mode + "\n")
 sys.stderr.write("USING DROPOUT?  \t" + str(USE_DROPOUT) + "\n")
 sys.stderr.write("USING WORDVECS? \t" + str(USE_WV) + "\n")
 if options.mode in ["train", "refresh"]:
-    sys.stderr.write("MODEL WILL BE SAVED TO\t%s\n" %modelfname)
+    sys.stderr.write("VALIDATED MODEL WILL BE SAVED TO\t{}\n".format(model_file_name))
+else:
+    sys.stderr.write("MODEL USED FOR TEST:\t{}\n".format(model_file_name))
 sys.stderr.write("_____________________\n")
 
 UNK_PROB = 0.1
@@ -78,7 +83,7 @@ target_lu_map, lu_names = create_target_lu_map()
 if USE_WV:
     wvs = get_wvec_map()
     PRETDIM = len(wvs.values()[0])
-    sys.stderr.write("using pretrained embeddings of dimension " + str(PRETDIM) + "\n")
+    sys.stderr.write("using pretrained embeddings of dimension {}\n".format(PRETDIM))
 
 lock_dicts() 
 UNKTOKEN = VOCDICT.getid(UNK)
@@ -91,13 +96,12 @@ if options.mode in ["train", "refresh"]:
     dev_examples, _, _ = read_conll(DEV_CONLL)
     combined_dev = combine_examples(dev_examples)
     sys.stderr.write("unknowns in dev\n\n_____________________\n")
-    out_conll_file = "predicted." + VERSION + ".targetid.dev.out"
+    out_conll_file = "{}predicted-{}-targetid-dev.conll".format(model_dir, VERSION)
 elif options.mode  == "test":
     dev_examples, m, t = read_conll(TEST_CONLL)
     combined_dev = combine_examples(dev_examples)
     sys.stderr.write("unknowns in test\n\n_____________________\n")
-    out_conll_file = "predicted." + VERSION + ".targetid.test.out"
-    fefile = "my.predict.test.frame.elements"
+    out_conll_file = "{}predicted-{}-targetid-test.conll".format(model_dir, VERSION)
 else:
     raise Exception("invalid parser mode", options.mode)
 
@@ -197,13 +201,13 @@ w_f = model.add_parameters((2, HIDDENDIM))  # prediction: is a target or not.
 b_f = model.add_parameters((2, 1))
 
 
-def identify_targets(builders, tokens, postags, lemmas, goldtargets=None):
+def identify_targets(builders, tokens, postags, lemmas, gold_targets=None):
     """
     Target identification model, using bidirectional LSTMs, with a
     multilinear perceptron layer on top for classification.
     """
     renew_cg()
-    trainmode = (goldtargets is not None)
+    train_mode = (gold_targets is not None)
 
     sentlen = len(tokens)
     emb_x = [v_x[tok] for tok in tokens]
@@ -230,7 +234,7 @@ def identify_targets(builders, tokens, postags, lemmas, goldtargets=None):
     pb_f = parameter(b_f)
 
     # Initializing the two LSTMs.
-    if USE_DROPOUT and trainmode:
+    if USE_DROPOUT and train_mode:
         builders[0].set_dropout(DROPOUT_RATE)
         builders[1].set_dropout(DROPOUT_RATE)
     f_init, b_init = [i.initial_state() for i in builders]
@@ -245,19 +249,19 @@ def identify_targets(builders, tokens, postags, lemmas, goldtargets=None):
             continue
         h_i = concatenate([fw_x[i], bw_x[sentlen - i - 1]])
         score_i = pw_f * rectify(pw_z * h_i + pb_z) + pb_f
-        if trainmode and USE_DROPOUT:
+        if train_mode and USE_DROPOUT:
             score_i = dropout(score_i, DROPOUT_RATE)
 
         logloss = log_softmax(score_i, [0, 1])
-        if not trainmode:
-            isitatarget = np.argmax(logloss.npvalue())
+        if not train_mode:
+            is_target = np.argmax(logloss.npvalue())
         else:
-            isitatarget = int(i in goldtargets)
+            is_target = int(i in gold_targets)
         
         if int(np.argmax(logloss.npvalue())) != 0:
             predicted_targets[i] = (create_lexical_unit(lemmas[i], postags[i], tokens[i]), None)
         
-        losses.append(pick(logloss, isitatarget))
+        losses.append(pick(logloss, is_target))
     
     objective = -esum(losses) if losses else None
     return objective, predicted_targets
@@ -266,7 +270,7 @@ def identify_targets(builders, tokens, postags, lemmas, goldtargets=None):
 def print_as_conll(gold_examples, predicted_target_dict):
     """
     Creates a CoNLL object with predicted target and lexical unit.
-    # TODO(swabha): Need to spit out one conll for each LU, *WITH corresponding frame*!
+    Spits out one CoNLL for each LU.
     """
     with codecs.open(out_conll_file, "w", "utf-8") as conll_file:
         for gold, pred in zip(gold_examples, predicted_target_dict):
@@ -282,9 +286,19 @@ PATIENCE = 25
 EVAL_EVERY_EPOCH = 100
 DEV_EVAL_EPOCH = 3 * EVAL_EVERY_EPOCH
 
+best_dev_f1 = 0.0
+if options.mode in ["refresh"]:
+    sys.stderr.write("Reusing model from {} ...\n".format(model_file_name))
+    model.populate(model_file_name)
+    with open(os.path.join(model_dir, "best-dev-f1.txt"), "r") as fin:
+        for line in fin:
+            best_dev_f1 = float(line.strip())
+    fin.close()
+    sys.stderr.write("Best dev F1 so far = %.4f\n" % best_dev_f1)
+
+
 if options.mode in ["train", "refresh"]:
     tagged = loss = 0.0
-    bestdevf = 0.0
     train_result = [0.0, 0.0, 0.0]
 
     last_updated_epoch = 0
@@ -301,14 +315,14 @@ if options.mode in ["train", "refresh"]:
             inptoks = []
             unk_replace_tokens(trex.tokens, inptoks, VOCDICT, UNK_PROB, UNKTOKEN)
 
-            trexloss, trexpred = identify_targets(
-                builders, inptoks, trex.postags, trex.lemmas, goldtargets=trex.targetframedict.keys())
+            trex_loss, trexpred = identify_targets(
+                builders, inptoks, trex.postags, trex.lemmas, gold_targets=trex.targetframedict.keys())
             trainex_result = evaluate_example_targetid(trex.targetframedict.keys(), trexpred)
             train_result = np.add(train_result, trainex_result)
 
-            if trexloss is not None:
-                loss += trexloss.scalar_value()
-                trexloss.backward()
+            if trex_loss is not None:
+                loss += trex_loss.scalar_value()
+                trex_loss.backward()
                 trainer.update()
             tagged += 1
 
@@ -328,23 +342,23 @@ if options.mode in ["train", "refresh"]:
                     corpus_result = np.add(corpus_result, devex_result)
                     devtagged += 1
 
-                devp, devr, devf = calc_f(corpus_result)
-                devtp, devfp, devfn = corpus_result
+                dev_p, dev_r, dev_f1 = calc_f(corpus_result)
+                dev_tp, dev_fp, dev_fn = corpus_result
                 sys.stderr.write("[dev epoch=%d] loss = %.6f "
                                  "p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f"
                                  % (epoch, devloss/devtagged,
-                                    devp, devtp, devtp + devfp,
-                                    devr, devtp, devtp + devfn,
-                                    devf))
-                if devf > bestdevf:
-                    bestdevf = devf
-                    # TODO(swabha) : instead of printing the result
-                    # print_result(devexamples, predictions)
-                    sys.stderr.write(" -- saving to {}".format(MODELSYMLINK))
+                                    dev_p, dev_tp, dev_tp + dev_fp,
+                                    dev_r, dev_tp, dev_tp + dev_fn,
+                                    dev_f1))
+                if dev_f1 > best_dev_f1:
+                    best_dev_f1 = dev_f1
+                    with open(os.path.join(model_dir, "best-dev-f1.txt"), "w") as fout:
+                        fout.write("{}\n".format(best_dev_f1))
 
-                    model.save(modelfname)
-                    os.symlink(modelfname, "tmp.link")
-                    os.rename("tmp.link", MODELSYMLINK)
+                    sys.stderr.write(" -- saving to {}".format(model_file_name))
+                    model.save(model_file_name)
+                    print_as_conll(combined_dev, predictions)
+                    
                     last_updated_epoch = epoch
                 sys.stderr.write("\n")
         if epoch - last_updated_epoch > PATIENCE:
@@ -352,7 +366,7 @@ if options.mode in ["train", "refresh"]:
             break
 
 elif options.mode == "test":
-    model.populate(options.model_file)
+    model.populate(model_file_name)
     corpus_tp_fp_fn = [0.0, 0.0, 0.0]
 
     test_predictions = []
