@@ -131,12 +131,14 @@ def create_target_lu_map():
     for lu in root.iter('{http://framenet.icsi.berkeley.edu}lu'):
         lu_name = lu.attrib["name"]
         lu_names.add(lu_name)
+
         target_name = lu_name.split('.')[0]
+        LUDICT.addstr(target_name)
         if target_name not in target_lu_map:
-            target_lu_map[target_name] = []
+            target_lu_map[target_name] = set([])
         else:
             repeated += 1
-        target_lu_map[target_name].append(lu_name)
+        target_lu_map[target_name].add(lu_name)
         if len(target_lu_map[target_name]) > multiplicity:
             multiplicity = len(target_lu_map[target_name])
         total += 1

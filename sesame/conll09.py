@@ -51,44 +51,39 @@ class CoNLL09Element:
             self.role = FEDICT.addstr(ele[14])
 
     def get_str(self, rolelabel=None, no_args=False):
-        idstr = str(self.id) + "\t"
-        form = VOCDICT.getstr(self.form) + "\t"
-        lem = LEMDICT.getstr(self.nltk_lemma) + "\t"
-        nltkpos = POSDICT.getstr(self.nltk_pos) + "\t"
+        idstr = str(self.id)
+        form = VOCDICT.getstr(self.form)
+        predicted_lemma = LEMDICT.getstr(self.nltk_lemma)
+        nltkpos = POSDICT.getstr(self.nltk_pos)
 
-        dephead = "_\t"
-        deprel = "_\t"
+        dephead = "_"
+        deprel = "_"
         if self.dephead != NOTALABEL:
-            dephead = str(self.dephead) + "\t"
-            deprel = DEPRELDICT.getstr(self.deprel) + "\t"
+            dephead = str(self.dephead)
+            deprel = DEPRELDICT.getstr(self.deprel)
 
         if self.is_pred:
-            lu = LUDICT.getstr(self.lu) + "." + LUPOSDICT.getstr(self.lupos) + "\t"
+            lu = LUDICT.getstr(self.lu) + "." + LUPOSDICT.getstr(self.lupos)
         else:
-            lu = LUDICT.getstr(self.lu) + "\t"
-        frame = FRAMEDICT.getstr(self.frame) + "\t"
+            lu = LUDICT.getstr(self.lu)
+        frame = FRAMEDICT.getstr(self.frame)
 
         if rolelabel is None:
             if self.is_arg:
-                rolelabel = INV_ARGTYPES[self.argtype] + "-" + FEDICT.getstr(self.role) + "\t"
+                rolelabel = INV_ARGTYPES[self.argtype] + "-" + FEDICT.getstr(self.role)
             else:
-                rolelabel = INV_ARGTYPES[self.argtype] + "\t"
+                rolelabel = INV_ARGTYPES[self.argtype]
 
         if no_args:  # For Target ID / Frame ID predictions
-            rolelabel = "O\t"
+            rolelabel = "O"
 
         if DEBUGMODE:
             return idstr + form + lu + frame + rolelabel
         else:
-            return (idstr  # ID = 0
-                    + form  # FORM = 1
-                    + "_\t" + lem  # LEMMA PLEMMA = 2,3
-                    + self.fn_pos + "\t" + nltkpos  # POS PPOS = 4,5
-                    + str(self.sent_num) + "\t_\t"  # FEAT PFEAT = 6,7 ~ replacing FEAT with sentence number
-                    + "_\t" + dephead  # HEAD PHEAD = 8,9
-                    + "_\t" + deprel  # DEPREL PDEPREL = 10,11
-                    + lu + frame  # FILLPRED PRED = 12,13
-                    + rolelabel + "\n")  # APREDS = 14
+            # ID    FORM    LEMMA   PLEMMA  POS PPOS    SENT#   PFEAT   HEAD    PHEAD   DEPREL  PDEPREL LU  FRAME ROLE
+            # 0     1       2       3       4   5       6       7       8       9       10      11      12  13    14
+            return "{}\t{}\t_\t{}\t{}\t{}\t{}\t_\t_\t{}\t_\t{}\t{}\t{}\t{}\n".format(
+                self.id, form, predicted_lemma, self.fn_pos, nltkpos, self.sent_num, dephead, deprel, lu, frame, rolelabel)
 
 
 class CoNLL09Example(FrameSemParse):

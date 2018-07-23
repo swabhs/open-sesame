@@ -77,9 +77,9 @@ train_examples, _, _ = read_conll(train_conll)
 combined_train = combine_examples(train_examples)
 sys.stderr.write( "{} combined into {} examples for Target ID.\n".format(len(train_examples), len(combined_train)))
 
-post_train_lock_dicts()
-
+# Need to read all LUs before locking the dictionaries.
 target_lu_map, lu_names = create_target_lu_map()
+post_train_lock_dicts()
 
 if USE_WV:
     wvs = get_wvec_map()
@@ -148,10 +148,8 @@ def check_if_potential_target(lemma):
     the LU index provided under FrameNet. Note that since we use NLTK lemmas, 
     this might be lossy.
     """
-    nltk_lem = LEMDICT.getstr(lemma)
-    if nltk_lem in target_lu_map or nltk_lem.lower() in target_lu_map:
-        return True
-    return False
+    nltk_lem_str = LEMDICT.getstr(lemma)
+    return nltk_lem_str in target_lu_map or nltk_lem_str.lower() in target_lu_map
         
 
 def create_lexical_unit(lemma_id, pos_id, token_id):
@@ -164,18 +162,24 @@ def create_lexical_unit(lemma_id, pos_id, token_id):
     nltk_lem_str = LEMDICT.getstr(lemma_id)
     if nltk_lem_str not in target_lu_map and nltk_lem_str.lower() in target_lu_map:
         nltk_lem_str = nltk_lem_str.lower()
-    if nltk_lem_str == UNKTOKEN:
+
+    # Lemma is not in FrameNet, but it could be a lemmatization error.
+    if nltk_lem_str == UNK:
         if VOCDICT.getstr(token_id) in target_lu_map:
             nltk_lem_str = VOCDICT.getstr(token_id)
         elif VOCDICT.getstr(token_id).lower() in target_lu_map:
             nltk_lem_str = VOCDICT.getstr(token_id).lower()
     assert nltk_lem_str in target_lu_map
-    
+    assert LUDICT.getid(nltk_lem_str) != LUDICT.getid(UNK)
+
     nltk_pos_str = POSDICT.getstr(pos_id)
     rule_pos_str = get_fn_pos_by_rules(nltk_pos_str.lower(), nltk_lem_str)
     rule_lupos = nltk_lem_str + "." + rule_pos_str
+
+    # Lemma is not seen with this pos tag.
     if rule_lupos not in lu_names:
-        return LexicalUnit(LUDICT.getid(UNKTOKEN), LUPOSDICT.getid(rule_pos_str))
+        # Hack: replace with anything the lemma is seen with.
+        rule_pos_str = list(target_lu_map[nltk_lem_str])[0].split(".")[-1]
     return LexicalUnit(LUDICT.getid(nltk_lem_str), LUPOSDICT.getid(rule_pos_str))
 
 
