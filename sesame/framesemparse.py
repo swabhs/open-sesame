@@ -1,8 +1,5 @@
+# -*- coding: utf-8 -*-
 from globalconfig import *
-# import sys, codecs
-#
-# UTF8Writer = codecs.getwriter('utf8')
-# sys.stdout = UTF8Writer(sys.stdout)
 
 
 class LexicalUnit(object):

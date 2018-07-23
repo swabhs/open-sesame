@@ -1,6 +1,7 @@
-import sys
+# -*- coding: utf-8 -*-
 from globalconfig import *
 import random
+import sys
 
 
 class FspDict:

@@ -26,7 +26,7 @@ if not os.path.exists(model_dir):
 train_conll = TRAIN_FTE
 
 USE_DROPOUT = not options.nodrop
-if options.mode == "test":
+if options.mode in ["test", "predict"]:
     USE_DROPOUT = False
 USE_WV = not options.nowordvec
 

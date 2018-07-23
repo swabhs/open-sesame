@@ -257,55 +257,55 @@ class CoNLL09Example(FrameSemParse):
     #         mystr += tmp.get_str()
     #     return mystr
 
-    def print_internal(self):
-        self.print_internal_sent()
-        self.print_internal_frame()
-        self.print_internal_args()
+    def print_internal(self, logger):
+        self.print_internal_sent(logger)
+        self.print_internal_frame(logger)
+        self.print_internal_args(logger)
 
-    def print_internal_sent(self):
-        print "tokens and depparse:\n",
+    def print_internal_sent(self, logger):
+        logger.write("tokens and depparse:\n")
         for x in xrange(len(self.tokens)):
-            print VOCDICT.getstr(self.tokens[x]),
-        print
+            logger.write(VOCDICT.getstr(self.tokens[x]) + " ")
+        logger.write("\n")
 
-    def print_internal_frame(self):
-        print "LU and frame:",
+    def print_internal_frame(self, logger):
+        logger.write("LU and frame: ")
         for tfpos in self.targetframedict:
             t, f = self.targetframedict[tfpos]
-            print VOCDICT.getstr(self.tokens[tfpos]), ":", \
-                LUDICT.getstr(t.id) + "." + LUPOSDICT.getstr(t.posid), \
-                FRAMEDICT.getstr(f.id)
+            logger.write(VOCDICT.getstr(self.tokens[tfpos]) + ":" + \
+                LUDICT.getstr(t.id) + "." + LUPOSDICT.getstr(t.posid) + \
+                FRAMEDICT.getstr(f.id) + "\n")
 
-    def print_external_frame(self, predtf):
-        print "LU and frame:",
+    def print_external_frame(self, predtf, logger):
+        logger.write("LU and frame: ")
         for tfpos in predtf:
             t, f = predtf[tfpos]
-            print VOCDICT.getstr(self.tokens[tfpos]), ":", \
-                LUDICT.getstr(t.id) + "." + LUPOSDICT.getstr(t.posid), \
-                FRAMEDICT.getstr(f.id)
+            logger.write(VOCDICT.getstr(self.tokens[tfpos]) + ":" + \
+                LUDICT.getstr(t.id) + "." + LUPOSDICT.getstr(t.posid) + \
+                FRAMEDICT.getstr(f.id) + "\n")
 
-    def print_internal_args(self):
-        print "frame:", FRAMEDICT.getstr(self.frame.id).upper()
+    def print_internal_args(self, logger):
+        logger.write("frame:" + FRAMEDICT.getstr(self.frame.id).upper() + "\n")
         for fepos in self.invertedfes:
             if fepos == FEDICT.getid(NOTANFE):
                 continue
             for span in self.invertedfes[fepos]:
-                print FEDICT.getstr(fepos), "\t",
+                logger.write(FEDICT.getstr(fepos) + "\t")
                 for s in xrange(span[0], span[1] + 1):
-                    print VOCDICT.getstr(self.tokens[s]),
-                print
-        print
+                    logger.write(VOCDICT.getstr(self.tokens[s]) + " ")
+                logger.write("\n")
+        logger.write("\n")
 
-    def print_external_parse(self, parse):
+    def print_external_parse(self, parse, logger):
         for fepos in parse:
             if fepos == FEDICT.getid(NOTANFE):
                 continue
             for span in parse[fepos]:
-                print FEDICT.getstr(fepos), "\t",
+                logger.write(FEDICT.getstr(fepos) + "\t")
                 for s in xrange(span[0], span[1] + 1):
-                    print VOCDICT.getstr(self.tokens[s]),
-                print
-        print
+                    logger.write(VOCDICT.getstr(self.tokens[s]) + " ")
+                logger.write("\n")
+        logger.write("\n")
 
 
 def lock_dicts():

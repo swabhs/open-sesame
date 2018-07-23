@@ -1,9 +1,11 @@
+# -*- coding: utf-8 -*-
 import nltk
 import sys
 
 from globalconfig import NOTALABEL
 
 lemmatizer = nltk.stem.WordNetLemmatizer()
+
 
 class SentAnno:
 

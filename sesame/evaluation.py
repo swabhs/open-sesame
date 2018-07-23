@@ -1,4 +1,4 @@
-__author__ = 'swabha'
+# -*- coding: utf-8 -*-
 import numpy as np
 import time
 from dataio import *
@@ -147,20 +147,20 @@ def evaluate_example_argid(goldfes, predargmax, corefes, sentlen, notanfeid=None
 
     return [utp,ufp,ufn], [ltp,lfp,lfn], [wtp, wfp, wfn]
 
-def evaluate_corpus_argid(goldex, predictions, corefrmfemap, notanfeid):
+def evaluate_corpus_argid(goldex, predictions, corefrmfemap, notanfeid, logger):
     ures = labldres = tokres = [0.0, 0.0, 0.0]
 
     # first sentence
     sl = [0.0,0.0,0.0]
     sn = goldex[0].sent_num
-    print("Sent#%d :" % sn)
-    goldex[0].print_internal_sent()
+    logger.write("Sent#%d :\n" % sn)
+    goldex[0].print_internal_sent(logger)
 
     for testex, tpred in izip(goldex, predictions):
         sentnum = testex.sent_num
         if sentnum != sn:
             lp, lr, lf = calc_f(sl)
-            print("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
+            logger.write("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
                   "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
                   "\n-----------------------------\n"
                   % (sl[0], sl[0]+sl[1], sl[0]+sl[-1],
@@ -170,14 +170,14 @@ def evaluate_corpus_argid(goldex, predictions, corefrmfemap, notanfeid):
                      lf))
             sl = [0.0,0.0,0.0]
             sn = sentnum
-            print("Sent#%d :" % sentnum)
-            testex.print_internal_sent()
+            logger.write("Sent#%d :\n" % sentnum)
+            testex.print_internal_sent(logger)
 
-        print "gold:"
-        testex.print_internal_args()
+        logger.write("gold:\n")
+        testex.print_internal_args(logger)
 
-        print "prediction:"
-        testex.print_external_parse(tpred)
+        logger.write("prediction:")
+        testex.print_external_parse(tpred, logger)
 
         if testex.frame.id in corefrmfemap:
             corefes = corefrmfemap[testex.frame.id]
@@ -191,11 +191,11 @@ def evaluate_corpus_argid(goldex, predictions, corefrmfemap, notanfeid):
         tokres = np.add(tokres, t)
 
         sl = np.add(sl, l)
-        print l[0],"/",l[0]+l[1], "/", l[0]+l[-1]
+        logger.write("{} / {} / {}\n".format(l[0], l[0]+l[1], l[0]+l[-1]))
 
     # last sentence
     lp, lr, lf = calc_f(sl)
-    print("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
+    logger.write("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
           "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
           "\n-----------------------------\n"
           % (sl[0], sl[0]+sl[1], sl[0]+sl[-1],

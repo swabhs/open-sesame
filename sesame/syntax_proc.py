@@ -1,7 +1,9 @@
-__author__ = 'swabha'
+# -*- coding: utf-8 -*-
 
-import sys,codecs
+import codecs
 from itertools import izip
+import sys
+
 
 def join_fnconll_parseyconll(conllfile, synfile, outfile):
     with codecs.open(outfile, "w", "utf-8") as outf:

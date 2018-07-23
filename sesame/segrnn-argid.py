@@ -29,7 +29,6 @@ optpr.add_option("--wordvec", action="store_true", default=True)
 optpr.add_option("--hier", action="store_true", default=False)
 optpr.add_option("--syn", type='choice', choices=['dep', 'constit', 'none'], default='none')
 optpr.add_option("--ptb", action="store_true", default=False)
-optpr.add_option("--fefile", help="output frame element file for semafor eval", metavar="FILE")
 optpr.add_option("--raw_input", type="str", metavar="FILE")
 (options, args) = optpr.parse_args()
 
@@ -49,6 +48,8 @@ USE_SPAN_CLIP = (options.spanlen == 'clip')
 ALLOWED_SPANLEN = 20
 
 USE_DROPOUT = options.dropout
+if options.mode in ["test", "predict"]:
+    USE_DROPOUT = False
 DROPOUT_RATE = 0.1
 
 USE_WV = options.wordvec
@@ -133,7 +134,7 @@ elif options.mode in ["test", "ensemble"]:
     devexamples, _, _ = read_conll(options.test_conll, options.syn)
     sys.stderr.write("unknowns in test\n\n_____________________\n")
     out_conll_file = "{}predicted-{}-argid-test.conll".format(model_dir, VERSION)
-    fefile = "{}predicted-test.fes".format(model_dir)
+    fe_file = "{}predicted-{}-argid-test.fes".format(model_dir, VERSION)
     if SAVE_FOR_ENSEMBLE:
         out_ens_file = "{}ensemble.{}".format(model_dir, out_conll_file.split("/")[-1][:-11])
     if options.mode == "ensemble":
@@ -866,13 +867,13 @@ def print_as_conll(golds, pred_targmaps):
         f.close()
 
 
-def print_eval_result(examples, expredictions):
+def print_eval_result(examples, expredictions, logger):
     evalstarttime = time.time()
     corp_up, corp_ur, corp_uf, \
     corp_lp, corp_lr, corp_lf, \
     corp_wp, corp_wr, corp_wf, \
     corp_ures, corp_labldres, corp_tokres = evaluate_corpus_argid(
-        examples, expredictions, corefrmfemap, NOTANFEID)
+        examples, expredictions, corefrmfemap, NOTANFEID, logger)
 
     sys.stderr.write("\n[test] wpr = %.5f (%.1f/%.1f) wre = %.5f (%.1f/%.1f)\n"
                      "[test] upr = %.5f (%.1f/%.1f) ure = %.5f (%.1f/%.1f)\n"
@@ -892,6 +893,8 @@ def print_eval_result(examples, expredictions):
 NUMEPOCHS = 1000
 LOSS_EVAL_EPOCH = 100
 DEV_EVAL_EPOCHS = 10 * LOSS_EVAL_EPOCH
+
+logger = open("{}/argid-prediction-analysis.log".format(model_dir), "w")
 
 if options.mode in ['test', 'refresh']:
     sys.stderr.write("Reusing model from {} ...\n".format(model_file_name))
@@ -1011,9 +1014,9 @@ elif options.mode == "ensemble":
     sys.stderr.write("printing output conll to " + out_conll_file + " ... ")
     print_as_conll(devexamples, testpredictions)
     sys.stderr.write("done!\n")
-    print_eval_result(devexamples, testpredictions)
-    sys.stderr.write("printing frame-elements to " + options.fefile + " ...\n")
-    convert_conll_to_frame_elements(out_conll_file, options.fefile)
+    print_eval_result(devexamples, testpredictions, logger)
+    sys.stderr.write("printing frame-elements to " + fe_file + " ...\n")
+    convert_conll_to_frame_elements(out_conll_file, fe_file)
     sys.stderr.write("done!\n")
 
 elif options.mode == "test":
@@ -1025,7 +1028,7 @@ elif options.mode == "test":
     teststarttime = time.time()
 
     testpredictions = []
-    for tidx, testex in enumerate(devexamples, 1):
+    for tidx, testex in enumerate(devexamples[:100], 1):
         if tidx % 100 == 0:
             sys.stderr.write(str(tidx) + "...")
         testargmax = identify_fes(testex.tokens,
@@ -1038,9 +1041,9 @@ elif options.mode == "test":
     sys.stderr.write("printing output conll to " + out_conll_file + " ... ")
     print_as_conll(devexamples, testpredictions)
     sys.stderr.write("done!\n")
-    print_eval_result(devexamples, testpredictions)
-    sys.stderr.write("printing frame-elements to " + options.fefile + " ...\n")
-    convert_conll_to_frame_elements(out_conll_file, options.fefile)
+    print_eval_result(devexamples, testpredictions, logger)
+    sys.stderr.write("printing frame-elements to " + fe_file + " ...\n")
+    convert_conll_to_frame_elements(out_conll_file, fe_file)
     sys.stderr.write("done!\n")
 
 elif options.mode == "predict":
@@ -1055,3 +1058,5 @@ elif options.mode == "predict":
     sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
     print_as_conll(instances, predictions)
     sys.stderr.write("Done!\n")
+
+logger.close()

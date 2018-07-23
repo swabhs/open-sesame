@@ -1,4 +1,4 @@
-__author__ = 'swabha'
+# -*- coding: utf-8 -*-
 import conll09 as c9
 from dataio import *
 

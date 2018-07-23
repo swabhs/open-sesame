@@ -58,13 +58,13 @@ A bidirectional LSTM model takes into account the lexical unit index in FrameNet
 
 `MODEL=frameid`
 
-Frame identification is based on a bidirectional LSTM model. Targets and their respective lexical units need to be identified before this step. At test time, the model spits out example-wise analysis to the command line.
+Frame identification is based on a bidirectional LSTM model. Targets and their respective lexical units need to be identified before this step. At test time, example-wise analysis is logged in the model directory.
 
 ### 3. Argument (Frame-Element) Identification
 
 `MODEL=segrnn-argid`
 
-Argument identification is based on a segmental recurrent neural net, used as the *baseline* in the [paper](https://arxiv.org/abs/1706.09528). Targets and their respective lexical units need to be identified, and frames corresponding to the LUs predicted before this step. At test time, the model spits out example-wise analysis to the command line.
+Argument identification is based on a segmental recurrent neural net, used as the *baseline* in the [paper](https://arxiv.org/abs/1706.09528). Targets and their respective lexical units need to be identified, and frames corresponding to the LUs predicted before this step. At test time, example-wise analysis is logged in the model directory.
 
 ## Prediction on unannotated data
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import nltk
 lemmatizer = nltk.stem.WordNetLemmatizer()
 

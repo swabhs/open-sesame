@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from itertools import izip
 from nltk.tree import ParentedTree
 

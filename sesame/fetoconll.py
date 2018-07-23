@@ -1,6 +1,7 @@
-__author__ = 'swabha'
-import sys,codecs
+# -*- coding: utf-8 -*-
+import codecs
 import globalconfig as gc
+import sys
 
 def read_sents(sentfile):
     sentences = []

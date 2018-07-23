@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 UNK = "UNK"
 NOTALABEL = "_"
 NOTANFE = "O"

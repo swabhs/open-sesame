@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+
 class ArgPosition(object):
     BEFORE, AFTER, OVERLAP, WITHIN = range(4)
 

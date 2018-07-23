@@ -31,6 +31,8 @@ else:
     train_conll = TRAIN_FTE
 
 USE_DROPOUT = not options.nodrop
+if options.mode in ["test", "predict"]:
+    USE_DROPOUT = False
 USE_WV = not options.nowordvec
 USE_HIER = options.hier
 
@@ -67,7 +69,6 @@ def find_multitokentargets(examples, split):
     for tr in examples:
         tottargs += 1
         if len(tr.targetframedict) > 1:
-            # tr.print_internal()
             multitoktargs += 1
             tfs = set(tr.targetframedict.values())
             if len(tfs) > 1:
@@ -310,8 +311,9 @@ elif options.mode == "test":
 
     sn = devexamples[0].sent_num
     sl = [0.0,0.0,0.0]
-    print("Sent#%d :" % sn)
-    devexamples[0].print_internal_sent()
+    logger = open("{}/frameid-prediction-analysis.log".format(model_dir), "w")
+    logger.write("Sent#%d :\n" % sn)
+    devexamples[0].print_internal_sent(logger)
 
     for testex in devexamples:
         _, predicted = identify_frames(builders, testex.tokens, testex.postags, testex.lu, testex.targetframedict.keys())
@@ -324,7 +326,7 @@ elif options.mode == "test":
         sentnum = testex.sent_num
         if sentnum != sn:
             lp, lr, lf = calc_f(sl)
-            print("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
+            logger.write("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
                   "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
                   "\n-----------------------------\n"
                   % (sl[0], sl[0]+sl[1], sl[0]+sl[-1],
@@ -334,20 +336,20 @@ elif options.mode == "test":
                      lf))
             sl = [0.0,0.0,0.0]
             sn = sentnum
-            print("Sent#%d :" % sentnum)
-            testex.print_internal_sent()
+            logger.write("Sent#%d :\n" % sentnum)
+            testex.print_internal_sent(logger)
 
-        print "gold:"
-        testex.print_internal_frame()
-        print "prediction:"
-        testex.print_external_frame(predicted)
+        logger.write("gold:\n")
+        testex.print_internal_frame(logger)
+        logger.write("prediction:\n")
+        testex.print_external_frame(predicted, logger)
 
         sl = np.add(sl, tpfpfn)
-        print tpfpfn[0], "/", tpfpfn[0]+tpfpfn[1], "/", tpfpfn[0]+tpfpfn[-1]
+        logger.write("{} / {} / {}\n".format(tpfpfn[0], tpfpfn[0]+tpfpfn[1], tpfpfn[0]+tpfpfn[-1]))
 
     # last sentence
     lp, lr, lf = calc_f(sl)
-    print("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
+    logger.write("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
           "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
           "\n-----------------------------\n"
           % (sl[0], sl[0]+sl[1], sl[0]+sl[-1],
@@ -381,3 +383,5 @@ elif options.mode == "predict":
     sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
     print_as_conll(instances, predictions)
     sys.stderr.write("Done!\n")
+
+logger.close()

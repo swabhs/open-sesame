@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys, codecs, os
 import xml.etree.ElementTree as et
 from conll09 import *
@@ -5,15 +6,15 @@ from sentence import *
 from nltk.corpus import BracketParseCorpusReader
 from globalconfig import *
 
-def read_conll(conllfile, syn_type=None):
-    sys.stderr.write("reading " + conllfile + "...\n")
+def read_conll(conll_file, syn_type=None):
+    sys.stderr.write("Reading {} ...\n".format(conll_file))
 
     read_depsyn = read_constits = False
     if syn_type == "dep":
         read_depsyn = True
     elif syn_type == "constit":
         read_constits = True
-        cparses = read_brackets(CONSTIT_MAP[conllfile])
+        cparses = read_brackets(CONSTIT_MAP[conll_file])
 
 
     examples = []
@@ -23,7 +24,7 @@ def read_conll(conllfile, syn_type=None):
 
     # outf = open(conllfile+".sentswithargs", "wb")
     next = 0
-    with codecs.open(conllfile, "r", "utf-8") as cf:
+    with codecs.open(conll_file, "r", "utf-8") as cf:
         snum = -1
         for l in cf:
             l = l.strip()
@@ -52,7 +53,7 @@ def read_conll(conllfile, syn_type=None):
             elements.append(CoNLL09Element(l, read_depsyn))
         cf.close()
         # outf.close()
-    sys.stderr.write("# examples in %s : %d in %d sents\n" %(conllfile, len(examples), next))
+    sys.stderr.write("# examples in %s : %d in %d sents\n" %(conll_file, len(examples), next))
     sys.stderr.write("# examples with missing arguments : %d\n\n" %missingargs)
     if read_constits: analyze_constits_fes(examples)
     return examples, missingargs, totalexamples
