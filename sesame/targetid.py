@@ -16,6 +16,7 @@ optpr.add_option("--mode", dest="mode", type="choice",
                  choices=["train", "test", "refresh", "predict"], default="train")
 optpr.add_option("-n", "--model_name", help="Name of model directory to save model to.")
 optpr.add_option("--raw_input", type="str", metavar="FILE")
+optpr.add_option("--config", type="str", metavar="FILE")
 (options, args) = optpr.parse_args()
 
 model_dir = "logs/{}/".format(options.model_name)
@@ -107,6 +108,9 @@ configuration = {"train": train_conll,
                  "dev_eval_epoch_frequency": 3}
 configuration_file = os.path.join(model_dir, "configuration.json")
 if options.mode == "train":
+    if options.config:
+        config_json = open(options.config, "r")
+        configuration = json.load(config_json)
     with open(configuration_file, "w") as fout:
         fout.write(json.dumps(configuration))
         fout.close()

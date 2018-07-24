@@ -12,6 +12,7 @@ logs/
 *out
 data # could be either a directory or a sym link
 data/
+model_configurations/
 dynet-base/
 alt_*/
 buggy*

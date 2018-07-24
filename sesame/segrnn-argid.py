@@ -15,19 +15,20 @@ from raw_data import make_data_instance
 
 optpr = OptionParser()
 optpr.add_option("--testf", dest="test_conll", help="Annotated CoNLL test file", metavar="FILE", default=TEST_CONLL)
-optpr.add_option("--mode", dest="mode", type='choice', choices=['train', 'test', 'refresh', 'ensemble', 'predict'],
-                 default='train')
+optpr.add_option("--mode", dest="mode", type="choice", choices=["train", "test", "refresh", "ensemble", "predict"],
+                 default="train")
 optpr.add_option("--saveensemble", action="store_true", default=False)
 optpr.add_option("-n", "--model_name", help="Name of model directory to save model to.")
 optpr.add_option("--exemplar", action="store_true", default=False)
-optpr.add_option("--spanlen", type='choice', choices=['clip', 'filter'], default='clip')
-optpr.add_option('--loss', type='choice', choices=['log', 'softmaxm', 'hinge'], default='softmaxm')
-optpr.add_option('--cost', type='choice', choices=['hamming', 'recall'], default='recall')
-optpr.add_option('--roc', type='int', default=2)
+optpr.add_option("--spanlen", type="choice", choices=["clip", "filter"], default="clip")
+optpr.add_option("--loss", type="choice", choices=["log", "softmaxm", "hinge"], default="softmaxm")
+optpr.add_option("--cost", type="choice", choices=["hamming", "recall"], default="recall")
+optpr.add_option("--roc", type="int", default=2)
 optpr.add_option("--hier", action="store_true", default=False)
-optpr.add_option("--syn", type='choice', choices=['dep', 'constit', 'none'], default='none')
+optpr.add_option("--syn", type="choice", choices=["dep", "constit", "none"], default="none")
 optpr.add_option("--ptb", action="store_true", default=False)
 optpr.add_option("--raw_input", type="str", metavar="FILE")
+optpr.add_option("--config", type="str", metavar="FILE")
 (options, args) = optpr.parse_args()
 
 model_dir = "logs/{}/".format(options.model_name)
@@ -37,12 +38,12 @@ if not os.path.exists(model_dir):
 
 if options.exemplar:
     train_conll = TRAIN_EXEMPLAR
-    # TODO(Swabha): Still don't have exemplar constituent parses.
+    # TODO(Swabha): Still don"t have exemplar constituent parses.
 else:
     train_conll = TRAIN_FTE
     train_constits = TRAIN_FTE_CONSTITS
 
-USE_SPAN_CLIP = (options.spanlen == 'clip')
+USE_SPAN_CLIP = (options.spanlen == "clip")
 USE_DROPOUT = True
 if options.mode in ["test", "predict"]:
     USE_DROPOUT = False
@@ -111,71 +112,74 @@ else:
     raise Exception("Invalid parser mode", options.mode)
 
 # Default configurations.
-configuration = {'train': train_conll,
-                 'use_exemplar': options.exemplar,
-                 'use_hierarchy': USE_HIER,
-                 'use_span_clip': USE_SPAN_CLIP,
-                 'allowed_max_span_length': 20,
-                 'using_dependency_parses': USE_DEPS,
-                 'using_constituency_parses': USE_CONSTITS,
-                 'using_scaffold_loss': USE_PTB_CONSTITS,
-                 'loss_type': options.loss,
-                 'cost_type': options.cost,
-                 'recall_oriented_cost': RECALL_ORIENTED_COST,
-                 'unk_prob': 0.1,
-                 'dropout_rate': 0.01,
-                 'token_dim': 60,
-                 'pos_dim': 4,
-                 'lu_dim': 64,
-                 'lu_pos_dim': 2,
-                 'frame_dim': 100,
-                 'fe_dim': 50,
-                 'phrase_dim': 16,
-                 'path_lstm_dim': 64,
-                 'path_dim': 64,
-                 'dependency_relation_dim': 8,
-                 'lstm_input_dim': 64,
-                 'lstm_dim': 64,
-                 'lstm_depth': 1,
-                 'hidden_dim': 64,
-                 'use_dropout': USE_DROPOUT,
-                 'pretrained_embedding_dim': PRETDIM,
-                 'num_epochs': 100 if not options.exemplar else 250,
-                 'patience': 25,
-                 'eval_after_every_epochs': 100,
-                 'dev_eval_epoch_frequency': 5}
-configuration_file = os.path.join(model_dir, 'configuration.json')
+configuration = {"train": train_conll,
+                 "use_exemplar": options.exemplar,
+                 "use_hierarchy": USE_HIER,
+                 "use_span_clip": USE_SPAN_CLIP,
+                 "allowed_max_span_length": 20,
+                 "using_dependency_parses": USE_DEPS,
+                 "using_constituency_parses": USE_CONSTITS,
+                 "using_scaffold_loss": USE_PTB_CONSTITS,
+                 "loss_type": options.loss,
+                 "cost_type": options.cost,
+                 "recall_oriented_cost": RECALL_ORIENTED_COST,
+                 "unk_prob": 0.1,
+                 "dropout_rate": 0.01,
+                 "token_dim": 60,
+                 "pos_dim": 4,
+                 "lu_dim": 64,
+                 "lu_pos_dim": 2,
+                 "frame_dim": 100,
+                 "fe_dim": 50,
+                 "phrase_dim": 16,
+                 "path_lstm_dim": 64,
+                 "path_dim": 64,
+                 "dependency_relation_dim": 8,
+                 "lstm_input_dim": 64,
+                 "lstm_dim": 64,
+                 "lstm_depth": 1,
+                 "hidden_dim": 64,
+                 "use_dropout": USE_DROPOUT,
+                 "pretrained_embedding_dim": PRETDIM,
+                 "num_epochs": 100 if not options.exemplar else 250,
+                 "patience": 25,
+                 "eval_after_every_epochs": 100,
+                 "dev_eval_epoch_frequency": 5}
+configuration_file = os.path.join(model_dir, "configuration.json")
 if options.mode == "train":
-    with open(configuration_file, 'w') as fout:
+    if options.config:
+        config_json = open(options.config, "r")
+        configuration = json.load(config_json)
+    with open(configuration_file, "w") as fout:
         fout.write(json.dumps(configuration))
         fout.close()
 else:
     json_file = open(configuration_file, "r")
     configuration = json.load(json_file)
 
-UNK_PROB = configuration['unk_prob']
-DROPOUT_RATE = configuration['dropout_rate']
-ALLOWED_SPANLEN = configuration['allowed_max_span_length']
+UNK_PROB = configuration["unk_prob"]
+DROPOUT_RATE = configuration["dropout_rate"]
+ALLOWED_SPANLEN = configuration["allowed_max_span_length"]
 
-TOKDIM = configuration['token_dim']
-POSDIM = configuration['pos_dim']
-LUDIM = configuration['lu_dim']
-LUPOSDIM = configuration['lu_pos_dim']
+TOKDIM = configuration["token_dim"]
+POSDIM = configuration["pos_dim"]
+LUDIM = configuration["lu_dim"]
+LUPOSDIM = configuration["lu_pos_dim"]
 
-FRMDIM = configuration['frame_dim']
-FEDIM = configuration['fe_dim']
+FRMDIM = configuration["frame_dim"]
+FEDIM = configuration["fe_dim"]
 INPDIM = TOKDIM + POSDIM + 1
 
-PATHLSTMDIM = configuration['path_lstm_dim']
-PATHDIM = configuration['path_dim']
+PATHLSTMDIM = configuration["path_lstm_dim"]
+PATHDIM = configuration["path_dim"]
 
 if USE_CONSTITS:
-    PHRASEDIM = configuration['phrase_dim']
+    PHRASEDIM = configuration["phrase_dim"]
 
-LSTMINPDIM = configuration['lstm_input_dim']
-LSTMDIM = configuration['lstm_dim']
-LSTMDEPTH = configuration['lstm_depth']
-HIDDENDIM = configuration['hidden_dim']
+LSTMINPDIM = configuration["lstm_input_dim"]
+LSTMDIM = configuration["lstm_dim"]
+LSTMDEPTH = configuration["lstm_depth"]
+HIDDENDIM = configuration["hidden_dim"]
 
 ARGPOSDIM = ArgPosition.size()
 SPANDIM = SpanWidth.size()
@@ -194,7 +198,7 @@ ALL_FEATS_DIM = 2 * LSTMDIM \
 
 if USE_DEPS:
     DEPHEADDIM = LSTMINPDIM + POSDIM
-    DEPRELDIM = configuration['dependency_relation_dim']
+    DEPRELDIM = configuration["dependency_relation_dim"]
     OUTHEADDIM = OutHeads.size()
 
     PATHLSTMINPDIM = DEPHEADDIM + DEPRELDIM
@@ -204,10 +208,10 @@ if USE_CONSTITS:
     ALL_FEATS_DIM += 1 + PHRASEDIM  # is a constit and what is it
     ALL_FEATS_DIM += PATHDIM
 
-NUMEPOCHS = configuration['num_epochs']
-PATIENCE = configuration['patience']
-LOSS_EVAL_EPOCH = configuration['eval_after_every_epochs']
-DEV_EVAL_EPOCHS = configuration['dev_eval_epoch_frequency'] * LOSS_EVAL_EPOCH
+NUMEPOCHS = configuration["num_epochs"]
+PATIENCE = configuration["patience"]
+LOSS_EVAL_EPOCH = configuration["eval_after_every_epochs"]
+DEV_EVAL_EPOCHS = configuration["dev_eval_epoch_frequency"] * LOSS_EVAL_EPOCH
 
 trainexamples = filter_long_ex(trainexamples, USE_SPAN_CLIP, ALLOWED_SPANLEN, NOTANFEID)
 
@@ -541,9 +545,9 @@ def recall_oriented_cost(factor, goldfactors):
 
 
 def cost(factor, goldfactors):
-    if options.cost == 'hamming':
+    if options.cost == "hamming":
         return hamming_cost(factor, goldfactors)
-    elif options.cost == 'recall':
+    elif options.cost == "recall":
         return recall_oriented_cost(factor, goldfactors)
     else:
         raise Exception("undefined cost type", options.cost)
@@ -688,16 +692,16 @@ def get_constit_loss(fws, bws, goldspans):
 
 
 def get_loss(factorexprs, gold_fes, valid_fes, sentlen):
-    if options.loss == 'hinge':
+    if options.loss == "hinge":
         return get_hinge_loss(factorexprs, gold_fes, valid_fes, sentlen)
 
     goldfactors = [Factor(span[0], span[1], feid) for feid in gold_fes for span in gold_fes[feid]]
     numeratorexprs = [factorexprs[gf] for gf in goldfactors]
     numerator = esum(numeratorexprs)
 
-    if options.loss == 'log':
+    if options.loss == "log":
         partition = get_logloss_partition(factorexprs, valid_fes, sentlen)
-    elif options.loss == 'softmaxm':
+    elif options.loss == "softmaxm":
         partition = get_softmax_margin_partition(factorexprs, goldfactors, valid_fes, sentlen)
     else:
         raise Exception("undefined loss function", options.loss)
@@ -901,7 +905,7 @@ def print_eval_result(examples, expredictions, logger):
 
 logger = open("{}/argid-prediction-analysis.log".format(model_dir), "w")
 
-if options.mode in ['test', 'refresh']:
+if options.mode in ["test", "refresh"]:
     sys.stderr.write("Reusing model from {} ...\n".format(model_file_name))
     model.populate(model_file_name)
 
@@ -913,7 +917,7 @@ if options.mode in ["refresh"]:
     fin.close()
     sys.stderr.write("Best dev F1 so far = %.4f\n" % best_dev_f1)
 
-if options.mode in ['train', 'refresh']:
+if options.mode in ["train", "refresh"]:
     tagged = loss = 0.0
     last_updated_epoch = 0
 
@@ -1038,7 +1042,7 @@ elif options.mode == "test":
     teststarttime = time.time()
 
     testpredictions = []
-    for tidx, testex in enumerate(devexamples[:100], 1):
+    for tidx, testex in enumerate(devexamples, 1):
         if tidx % 100 == 0:
             sys.stderr.write(str(tidx) + "...")
         testargmax = identify_fes(testex.tokens,
