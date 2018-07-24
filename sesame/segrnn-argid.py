@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 import math
 import os
 import sys
@@ -12,7 +13,6 @@ from discreteargidfeats import *
 from raw_data import make_data_instance
 
 
-
 optpr = OptionParser()
 optpr.add_option("--testf", dest="test_conll", help="Annotated CoNLL test file", metavar="FILE", default=TEST_CONLL)
 optpr.add_option("--mode", dest="mode", type='choice', choices=['train', 'test', 'refresh', 'ensemble', 'predict'],
@@ -24,8 +24,6 @@ optpr.add_option("--spanlen", type='choice', choices=['clip', 'filter'], default
 optpr.add_option('--loss', type='choice', choices=['log', 'softmaxm', 'hinge'], default='softmaxm')
 optpr.add_option('--cost', type='choice', choices=['hamming', 'recall'], default='recall')
 optpr.add_option('--roc', type='int', default=2)
-optpr.add_option("--dropout", action="store_true", default=True)
-optpr.add_option("--wordvec", action="store_true", default=True)
 optpr.add_option("--hier", action="store_true", default=False)
 optpr.add_option("--syn", type='choice', choices=['dep', 'constit', 'none'], default='none')
 optpr.add_option("--ptb", action="store_true", default=False)
@@ -39,56 +37,35 @@ if not os.path.exists(model_dir):
 
 if options.exemplar:
     train_conll = TRAIN_EXEMPLAR
-    # TODO: we still don't have exemplar constituent parses
+    # TODO(Swabha): Still don't have exemplar constituent parses.
 else:
     train_conll = TRAIN_FTE
     train_constits = TRAIN_FTE_CONSTITS
 
 USE_SPAN_CLIP = (options.spanlen == 'clip')
-ALLOWED_SPANLEN = 20
-
-USE_DROPOUT = options.dropout
+USE_DROPOUT = True
 if options.mode in ["test", "predict"]:
     USE_DROPOUT = False
-DROPOUT_RATE = 0.1
-
-USE_WV = options.wordvec
+USE_WV = True
 USE_HIER = options.hier
-
 USE_DEPS = USE_CONSTITS = False
 if options.syn == "dep":
     USE_DEPS = True
 elif options.syn == "constit":
     USE_CONSTITS = True
-
 USE_PTB_CONSTITS = options.ptb
-
 SAVE_FOR_ENSEMBLE = (options.mode == "test") and options.saveensemble
-
-UNK_PROB = 0.1
 RECALL_ORIENTED_COST = options.roc
 
-sys.stderr.write("\nCOMMAND: " + ' '.join(sys.argv) + "\n")
-sys.stderr.write("\nPARSER SETTINGS\n_____________________\n")
-sys.stderr.write("PARSING MODE:   \t" + options.mode + "\n")
-sys.stderr.write("USING EXEMPLAR? \t" + str(options.exemplar) + "\n")
-sys.stderr.write("USING SPAN CLIP?\t" + str(USE_SPAN_CLIP) + "\n")
-sys.stderr.write("LOSS TYPE:      \t" + options.loss + "\n")
-sys.stderr.write("COST TYPE:      \t" + options.cost + "\n")
-sys.stderr.write("R-O COST VALUE: \t" + str(options.roc) + "\n")
-sys.stderr.write("USING DROPOUT?  \t" + str(USE_DROPOUT) + "\n")
-sys.stderr.write("USING WORDVECS? \t" + str(USE_WV) + "\n")
-sys.stderr.write("USING HIERARCHY?\t" + str(USE_HIER) + "\n")
-sys.stderr.write("USING D-SYNTAX? \t" + str(USE_DEPS) + "\n")
-sys.stderr.write("USING C-SYNTAX? \t" + str(USE_CONSTITS) + "\n")
-sys.stderr.write("USING PTB-CLOSS?\t" + str(USE_PTB_CONSTITS) + "\n")
-
-if options.mode in ["train", "refresh"]:
-    sys.stderr.write("VALIDATED MODEL WILL BE SAVED TO\t%s\n" % model_file_name)
-if options.mode == "test":
-    sys.stderr.write("MODEL USED FOR TEST / PREDICTION:\t{}\n".format(model_file_name))
-    sys.stderr.write("SAVING ENSEMBLE?\t" + str(SAVE_FOR_ENSEMBLE) + "\n")
 sys.stderr.write("_____________________\n")
+sys.stderr.write("COMMAND: {}\n".format(" ".join(sys.argv)))
+if options.mode in ["train", "refresh"]:
+    sys.stderr.write("VALIDATED MODEL SAVED TO:\t{}\n".format(model_file_name))
+else:
+    sys.stderr.write("MODEL FOR TEST / PREDICTION:\t{}\n".format(model_file_name))
+    sys.stderr.write("SAVING ENSEMBLE?\t{}\n".format(SAVE_FOR_ENSEMBLE))
+sys.stderr.write("PARSING MODE:\t{}\n".format(options.mode))
+sys.stderr.write("_____________________\n\n")
 
 if USE_PTB_CONSTITS:
     ptbexamples = read_ptb()
@@ -97,42 +74,29 @@ trainexamples, _, _ = read_conll(train_conll, options.syn)
 post_train_lock_dicts()
 
 frmfemap, corefrmfemap, _ = read_frame_maps()
-# to handle FE in annotation (sigh)
+# Hack to handle FE in version 1.5 annotation!
 frmfemap[FRAMEDICT.getid("Measurable_attributes")].append(FEDICT.getid("Dimension"))
 frmfemap[FRAMEDICT.getid("Removing")].append(FEDICT.getid("Frequency"))
 
 if USE_WV:
     wvs = get_wvec_map()
-    sys.stderr.write("using pretrained embeddings of dimension " + str(len(wvs.values()[0])) + "\n")
+    PRETDIM = len(wvs.values()[0])
 
 if USE_HIER:
     frmrelmap, feparents = read_frame_relations()
 
 lock_dicts()
+# Default labels - in CoNLL format these correspond to _
 UNKTOKEN = VOCDICT.getid(UNK)
-
-# default labels - in conll format these correspond to _
 NOTANLU = LUDICT.getid(NOTALABEL)
-NOTANFEID = FEDICT.getid(NOTANFE)
+NOTANFEID = FEDICT.getid(NOTANFE)  # O in CoNLL format.
 
-sys.stderr.write("# words in vocab:       " + str(VOCDICT.size()) + "\n")
-sys.stderr.write("# POS tags:             " + str(POSDICT.size()) + "\n")
-sys.stderr.write("# lexical units:        " + str(LUDICT.size()) + "\n")
-sys.stderr.write("# LU POS tags:          " + str(LUPOSDICT.size()) + "\n")
-sys.stderr.write("# frames:               " + str(FRAMEDICT.size()) + "\n")
-sys.stderr.write("# FEs:                  " + str(FEDICT.size()) + "\n")
-sys.stderr.write("# dependency relations: " + str(DEPRELDICT.size()) + "\n")
-sys.stderr.write("# constituency labels:  " + str(CLABELDICT.size()) + "\n")
-
-trainexamples = filter_long_ex(trainexamples, USE_SPAN_CLIP, ALLOWED_SPANLEN, NOTANFEID)
 
 if options.mode in ["train", "refresh"]:
     devexamples, _, _ = read_conll(DEV_CONLL, options.syn)
-    sys.stderr.write("unknowns in dev\n\n_____________________\n")
     out_conll_file = "{}predicted-{}-argid-dev.conll".format(model_dir, VERSION)
 elif options.mode in ["test", "ensemble"]:
     devexamples, _, _ = read_conll(options.test_conll, options.syn)
-    sys.stderr.write("unknowns in test\n\n_____________________\n")
     out_conll_file = "{}predicted-{}-argid-test.conll".format(model_dir, VERSION)
     fe_file = "{}predicted-{}-argid-test.fes".format(model_dir, VERSION)
     if SAVE_FOR_ENSEMBLE:
@@ -146,36 +110,72 @@ elif options.mode == "predict":
 else:
     raise Exception("Invalid parser mode", options.mode)
 
-sys.stderr.write("# unseen, unlearnt test words in vocab: " + str(VOCDICT.num_unks()) + "\n")
-sys.stderr.write("# unseen, unlearnt test POS tags:       " + str(POSDICT.num_unks()) + "\n")
-sys.stderr.write("# unseen, unlearnt test lexical units:  " + str(LUDICT.num_unks()) + "\n")
-sys.stderr.write("# unseen, unlearnt test LU pos tags:    " + str(LUPOSDICT.num_unks()) + "\n")
-sys.stderr.write("# unseen, unlearnt test frames:         " + str(FRAMEDICT.num_unks()) + "\n")
-sys.stderr.write("# unseen, unlearnt test FEs:            " + str(FEDICT.num_unks()) + "\n")
-sys.stderr.write("# unseen, unlearnt test deprels:        " + str(DEPRELDICT.num_unks()) + "\n")
-sys.stderr.write("# unseen, unlearnt test constit labels: " + str(CLABELDICT.num_unks()) + "\n\n")
+# Default configurations.
+configuration = {'train': train_conll,
+                 'use_exemplar': options.exemplar,
+                 'use_hierarchy': USE_HIER,
+                 'use_span_clip': USE_SPAN_CLIP,
+                 'allowed_max_span_length': 20,
+                 'using_dependency_parses': USE_DEPS,
+                 'using_constituency_parses': USE_CONSTITS,
+                 'using_scaffold_loss': USE_PTB_CONSTITS,
+                 'loss_type': options.loss,
+                 'cost_type': options.cost,
+                 'recall_oriented_cost': RECALL_ORIENTED_COST,
+                 'unk_prob': 0.1,
+                 'dropout_rate': 0.01,
+                 'token_dim': 60,
+                 'pos_dim': 4,
+                 'lu_dim': 64,
+                 'lu_pos_dim': 2,
+                 'frame_dim': 100,
+                 'fe_dim': 50,
+                 'phrase_dim': 16,
+                 'path_lstm_dim': 64,
+                 'path_dim': 64,
+                 'dependency_relation_dim': 8,
+                 'lstm_input_dim': 64,
+                 'lstm_dim': 64,
+                 'lstm_depth': 1,
+                 'hidden_dim': 64,
+                 'use_dropout': USE_DROPOUT,
+                 'pretrained_embedding_dim': PRETDIM,
+                 'num_epochs': 100 if not options.exemplar else 250,
+                 'patience': 25,
+                 'eval_after_every_epochs': 100,
+                 'dev_eval_epoch_frequency': 5}
+configuration_file = os.path.join(model_dir, 'configuration.json')
+if options.mode == "train":
+    with open(configuration_file, 'w') as fout:
+        fout.write(json.dumps(configuration))
+        fout.close()
+else:
+    json_file = open(configuration_file, "r")
+    configuration = json.load(json_file)
 
+UNK_PROB = configuration['unk_prob']
+DROPOUT_RATE = configuration['dropout_rate']
+ALLOWED_SPANLEN = configuration['allowed_max_span_length']
 
-# TODO: like the Google papers try different versions of these out in parallel
-TOKDIM = 60
-POSDIM = 4
-if USE_WV:
-    PRETDIM = len(wvs.values()[0])
-LUDIM = 64
-LUPOSDIM = 2
-FRMDIM = 100
-FEDIM = 50
+TOKDIM = configuration['token_dim']
+POSDIM = configuration['pos_dim']
+LUDIM = configuration['lu_dim']
+LUPOSDIM = configuration['lu_pos_dim']
+
+FRMDIM = configuration['frame_dim']
+FEDIM = configuration['fe_dim']
 INPDIM = TOKDIM + POSDIM + 1
 
-if USE_CONSTITS:
-    PHRASEDIM = 16
-    PATHLSTMDIM = 64
-    PATHDIM = 64
+PATHLSTMDIM = configuration['path_lstm_dim']
+PATHDIM = configuration['path_dim']
 
-LSTMINPDIM = 64
-LSTMDIM = 64
-LSTMDEPTH = 1
-HIDDENDIM = 64
+if USE_CONSTITS:
+    PHRASEDIM = configuration['phrase_dim']
+
+LSTMINPDIM = configuration['lstm_input_dim']
+LSTMDIM = configuration['lstm_dim']
+LSTMDEPTH = configuration['lstm_depth']
+HIDDENDIM = configuration['hidden_dim']
 
 ARGPOSDIM = ArgPosition.size()
 SPANDIM = SpanWidth.size()
@@ -191,19 +191,45 @@ ALL_FEATS_DIM = 2 * LSTMDIM \
                 + SPANDIM \
                 + 2  # spanlen and log spanlen features and is a constitspan
 
+
 if USE_DEPS:
     DEPHEADDIM = LSTMINPDIM + POSDIM
-    DEPRELDIM = 8
+    DEPRELDIM = configuration['dependency_relation_dim']
     OUTHEADDIM = OutHeads.size()
 
     PATHLSTMINPDIM = DEPHEADDIM + DEPRELDIM
-    PATHLSTMDIM = 64
-    PATHDIM = 64
     ALL_FEATS_DIM += OUTHEADDIM + PATHDIM
 
 if USE_CONSTITS:
     ALL_FEATS_DIM += 1 + PHRASEDIM  # is a constit and what is it
     ALL_FEATS_DIM += PATHDIM
+
+NUMEPOCHS = configuration['num_epochs']
+PATIENCE = configuration['patience']
+LOSS_EVAL_EPOCH = configuration['eval_after_every_epochs']
+DEV_EVAL_EPOCHS = configuration['dev_eval_epoch_frequency'] * LOSS_EVAL_EPOCH
+
+trainexamples = filter_long_ex(trainexamples, USE_SPAN_CLIP, ALLOWED_SPANLEN, NOTANFEID)
+
+sys.stderr.write("\nPARSER SETTINGS (see {})\n_____________________\n".format(configuration_file))
+for key in configuration:
+    sys.stderr.write("{}:\t{}\n".format(key.upper(), configuration[key]))
+
+sys.stderr.write("\n")
+
+def print_data_status(fsp_dict, vocab_str):
+    sys.stderr.write("# {} = {}\n\tUnseen in dev/test = {}\n\tUnlearnt in dev/test = {}\n".format(
+        vocab_str, fsp_dict.size(), fsp_dict.num_unks()[0], fsp_dict.num_unks()[1]))
+
+print_data_status(VOCDICT, "Tokens")
+print_data_status(POSDICT, "POS tags")
+print_data_status(LUDICT, "LUs")
+print_data_status(LUPOSDICT, "LU POS tags")
+print_data_status(FRAMEDICT, "Frames")
+print_data_status(FEDICT, "FEs")
+print_data_status(CLABELDICT, "Constit Labels")
+print_data_status(DEPRELDICT, "Dependency Relations")
+sys.stderr.write("\n_____________________\n\n")
 
 model = Model()
 adam = AdamTrainer(model, 0.0005, 0.01, 0.9999, 1e-8)
@@ -288,8 +314,6 @@ def get_base_embeddings(trainmode, unkdtokens, tg_start, sentence):
     pb_bi = parameter(b_bi)
 
     sentlen = len(unkdtokens)
-    # tfkeys = sorted(tfdict)
-    # tg_start = tfkeys[0]
 
     if trainmode:
         emb_x = [noise(v_x[tok], 0.1) for tok in unkdtokens]
@@ -339,19 +363,19 @@ def get_target_frame_embeddings(embposdist_x, tfdict):
     tg_start = tfkeys[0]
     sentlen = len(embposdist_x)
 
-    # adding target word feature
+    # Adding target word feature
     lu, frame = tfdict[tg_start]
     tginit = tgtlstm.initial_state()
     target_x = tginit.transduce(embposdist_x[tg_start: tg_start + len(tfkeys) + 1])[-1]
 
-    # adding context features
+    # Adding context features
     ctxt = range(tg_start - 1, tfkeys[-1] + 2)
     if ctxt[0] < 0: ctxt = ctxt[1:]
     if ctxt[-1] > sentlen: ctxt = ctxt[:-1]
     c_init = ctxtlstm.initial_state()
     ctxt_x = c_init.transduce(embposdist_x[ctxt[0]:ctxt[-1]])[-1]
 
-    # adding features specific to LU and frame
+    # Adding features specific to LU and frame
     lu_v = lu_x[lu.id]
     lp_v = lp_x[lu.posid]
 
@@ -390,7 +414,8 @@ def get_span_embeddings(embpos_x):
         if len(tmpbws) != i + 1:
             raise Exception("incorrect number of backwards", i, len(tmpbws))
         spansize = i + 1
-        if USE_SPAN_CLIP and spansize - 1 > ALLOWED_SPANLEN: spansize = ALLOWED_SPANLEN + 1
+        if USE_SPAN_CLIP and spansize - 1 > ALLOWED_SPANLEN:
+            spansize = ALLOWED_SPANLEN + 1
         for k in xrange(spansize):
             bws[i - k][i] = tmpbws[k]
 
@@ -478,11 +503,8 @@ def get_factor_expressions(fws, bws, tfemb, tfdict, valid_fes, sentence, spaths_
                     fefixed = esum([fe_x[y]] + [fe_x[par] for par in feparents[y]])
                 else:
                     fefixed = fe_x[y]
-                # fefixed = nobackprop(fe_x[y])
                 fbemb_ijy = concatenate([fefixed, fbemb_ij])
                 factexprs[fctr] = pw_f * rectify(pw_z * fbemb_ijy + pb_z) + pb_f
-                # if USE_DROPOUT:
-                #     factexprs[fctr] = dropout(factexprs[fctr], DROPOUT_RATE)
     return factexprs
 
 
@@ -494,7 +516,6 @@ def denominator_check(n, k):
 
 
 def hamming_cost(factor, goldfactors):
-    # print "hamming-cost"
     if factor in goldfactors:
         return scalarInput(0)
     return scalarInput(1)
@@ -686,10 +707,6 @@ def get_loss(factorexprs, gold_fes, valid_fes, sentlen):
         sys.stderr.write("WARNING: partition ~~ numerator! possibly overfitting difference = %f\n"
                          % lossexp.scalar_value())
         return None
-        # raise Exception("ERROR: partition shouldn't exceeed numerator!",
-        #                 partition.scalar_value(),
-        #                 numerator.scalar_value(),
-        #                 lossexp.scalar_value())
 
     if lossexp.scalar_value() < 0.0:
         sys.stderr.write(str(gold_fes) + "\ngolds\n")
@@ -717,7 +734,6 @@ def get_loss(factorexprs, gold_fes, valid_fes, sentlen):
 def decode(factexprscalars, sentlen, valid_fes):
     alpha = [None for _ in xrange(sentlen)]
     backpointers = [None for _ in xrange(sentlen)]
-    # predfactors = []
     if USE_DROPOUT:
         raise Exception("incorrect usage of dropout, turn off!\n")
 
@@ -728,7 +744,6 @@ def decode(factexprscalars, sentlen, valid_fes):
         for y in valid_fes:
             fac = Factor(0, j, y)
             facscore = math.exp(factexprscalars[fac])
-            # facscore = exp(factexprscalars[fac]).scalar_value()
             if facscore > bestscore:
                 bestscore = facscore
                 bestlabel = y
@@ -747,7 +762,6 @@ def decode(factexprscalars, sentlen, valid_fes):
         for i in xrange(istart, j):
             for y in valid_fes:
                 fac = Factor(i + 1, j, y)
-                # facscore = exp(factexprscalars[fac]).scalar_value()
                 facscore = math.exp(factexprscalars[fac])
                 if facscore * alpha[i] > bestscore:
                     bestscore = facscore * alpha[i]
@@ -760,8 +774,7 @@ def decode(factexprscalars, sentlen, valid_fes):
     i = backpointers[j][0]
     argmax = {}
     while i >= 0:
-        fe = backpointers[j][1]  # FrameElement(backpointers[j][1])
-        # predfactors.append(Factor(i, j, fe))
+        fe = backpointers[j][1]
         if fe in argmax:
             argmax[fe].append((i, j))
         else:
@@ -797,10 +810,7 @@ def identify_fes(unkdtoks, sentence, tfdict, goldfes=None, testidx=None):
     trainmode = (goldfes is not None)
 
     global USE_DROPOUT
-    if options.dropout: USE_DROPOUT = trainmode
-
-    # pw_f = zeroes((1, HIDDENDIM))
-    # pb_f = zeroes((1, 1))
+    USE_DROPOUT = trainmode
 
     sentlen = len(unkdtoks)
     tfkeys = sorted(tfdict)
@@ -889,11 +899,6 @@ def print_eval_result(examples, expredictions, logger):
                         time.time() - evalstarttime))
 
 
-# main
-NUMEPOCHS = 1000
-LOSS_EVAL_EPOCH = 100
-DEV_EVAL_EPOCHS = 10 * LOSS_EVAL_EPOCH
-
 logger = open("{}/argid-prediction-analysis.log".format(model_dir), "w")
 
 if options.mode in ['test', 'refresh']:
@@ -901,7 +906,7 @@ if options.mode in ['test', 'refresh']:
     model.populate(model_file_name)
 
 best_dev_f1 = 0.0
-if options.mode in ["refresh"]:  
+if options.mode in ["refresh"]:
     with open(os.path.join(model_dir, "best-dev-f1.txt"), "r") as fin:
         for line in fin:
             best_dev_f1 = float(line.strip())
@@ -910,6 +915,7 @@ if options.mode in ["refresh"]:
 
 if options.mode in ['train', 'refresh']:
     tagged = loss = 0.0
+    last_updated_epoch = 0
 
     if USE_PTB_CONSTITS:
         trainexamples = trainexamples + ptbexamples
@@ -938,7 +944,6 @@ if options.mode in ['train', 'refresh']:
                                                     trex.sentence,
                                                     trex.targetframedict,
                                                     goldfes=trex.invertedfes)
-                # totnumspans = sum([len(trex.invertedfes[fi]) for fi in trex.invertedfes])
             tagged += taggedinex
 
             if trexloss is not None:
@@ -979,12 +984,17 @@ if options.mode in ['train', 'refresh']:
                     best_dev_f1 = lf
                     with open(os.path.join(model_dir, "best-dev-f1.txt"), "w") as fout:
                         fout.write("{}\n".format(best_dev_f1))
+                        fout.close()
 
                     print_as_conll(devexamples, predictions)
                     sys.stderr.write(" -- saving to {}".format(model_file_name))
                     model.save(model_file_name)
+                    last_updated_epoch = epoch
                 sys.stderr.write(" [took %.3f s]\n" % (time.time() - devstarttime))
                 starttime = time.time()
+        if epoch - last_updated_epoch > PATIENCE:
+            sys.stderr.write("Ran out of patience, ending training.\n")
+            break
 
 elif options.mode == "ensemble":
     exfs = {x: {} for x in xrange(len(devexamples))}

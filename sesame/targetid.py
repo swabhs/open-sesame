@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 import os
 import sys
 import time
@@ -11,10 +12,9 @@ from raw_data import make_data_instance
 
 
 optpr = OptionParser()
-optpr.add_option("--mode", dest="mode", type="choice", choices=["train", "test", "refresh", "predict"], default="train")
+optpr.add_option("--mode", dest="mode", type="choice",
+                 choices=["train", "test", "refresh", "predict"], default="train")
 optpr.add_option("-n", "--model_name", help="Name of model directory to save model to.")
-optpr.add_option("--nodrop", action="store_true", default=False)
-optpr.add_option("--nowordvec", action="store_true", default=False)
 optpr.add_option("--raw_input", type="str", metavar="FILE")
 (options, args) = optpr.parse_args()
 
@@ -25,35 +25,18 @@ if not os.path.exists(model_dir):
 
 train_conll = TRAIN_FTE
 
-USE_DROPOUT = not options.nodrop
+USE_DROPOUT = True
 if options.mode in ["test", "predict"]:
     USE_DROPOUT = False
-USE_WV = not options.nowordvec
 
-sys.stderr.write("\nCOMMAND: " + " ".join(sys.argv) + "\n")
-sys.stderr.write("\nPARSER SETTINGS\n_____________________\n")
-sys.stderr.write("PARSING MODE:   \t" + options.mode + "\n")
-sys.stderr.write("USING DROPOUT?  \t" + str(USE_DROPOUT) + "\n")
-sys.stderr.write("USING WORDVECS? \t" + str(USE_WV) + "\n")
-if options.mode in ["train", "refresh"]:
-    sys.stderr.write("VALIDATED MODEL WILL BE SAVED TO\t{}\n".format(model_file_name))
-else:
-    sys.stderr.write("MODEL USED FOR TEST / PREDICTION:\t{}\n".format(model_file_name))
 sys.stderr.write("_____________________\n")
-
-UNK_PROB = 0.1
-DROPOUT_RATE = 0.01
-
-TOKDIM = 100
-POSDIM = 100
-LEMDIM = 100
-
-INPDIM = TOKDIM + POSDIM + LEMDIM
-
-LSTMINPDIM = 100
-LSTMDIM = 100
-LSTMDEPTH = 2
-HIDDENDIM = 100
+sys.stderr.write("COMMAND: {}\n".format(" ".join(sys.argv)))
+if options.mode in ["train", "refresh"]:
+    sys.stderr.write("VALIDATED MODEL SAVED TO:\t{}\n".format(model_file_name))
+else:
+    sys.stderr.write("MODEL FOR TEST / PREDICTION:\t{}\n".format(model_file_name))
+sys.stderr.write("PARSING MODE:\t{}\n".format(options.mode))
+sys.stderr.write("_____________________\n\n")
 
 
 def combine_examples(corpus_ex):
@@ -65,43 +48,37 @@ def combine_examples(corpus_ex):
     for ex in corpus_ex[1:]:
         if ex.sent_num == combined_ex[-1].sent_num:
             current_sent = combined_ex.pop()
-            target_frame_dict = current_sent.targetframedict.copy()   
+            target_frame_dict = current_sent.targetframedict.copy()
             target_frame_dict.update(ex.targetframedict)
             current_sent.targetframedict = target_frame_dict
             combined_ex.append(current_sent)
             continue
         combined_ex.append(ex)
+    sys.stderr.write("Combined {} instances in data into {} instances.\n".format(
+        len(corpus_ex), len(combined_ex)))
     return combined_ex
 
 train_examples, _, _ = read_conll(train_conll)
 combined_train = combine_examples(train_examples)
-sys.stderr.write( "{} combined into {} examples for Target ID.\n".format(len(train_examples), len(combined_train)))
 
 # Need to read all LUs before locking the dictionaries.
 target_lu_map, lu_names = create_target_lu_map()
 post_train_lock_dicts()
 
-if USE_WV:
-    wvs = get_wvec_map()
-    PRETDIM = len(wvs.values()[0])
-    sys.stderr.write("using pretrained embeddings of dimension {}\n".format(PRETDIM))
+# Read pretrained word embeddings.
+pretrained_map = get_wvec_map()
+PRETRAINED_DIM = len(pretrained_map.values()[0])
 
-lock_dicts() 
+lock_dicts()
 UNKTOKEN = VOCDICT.getid(UNK)
-
-sys.stderr.write("# Words in vocab: " + str(VOCDICT.size()) + "\n")
-sys.stderr.write("# POS tags: " + str(POSDICT.size()) + "\n")
-sys.stderr.write("# Lemmas: " + str(LEMDICT.size()) + "\n")
 
 if options.mode in ["train", "refresh"]:
     dev_examples, _, _ = read_conll(DEV_CONLL)
     combined_dev = combine_examples(dev_examples)
-    sys.stderr.write("unknowns in dev\n\n_____________________\n")
     out_conll_file = "{}predicted-{}-targetid-dev.conll".format(model_dir, VERSION)
 elif options.mode  == "test":
     dev_examples, m, t = read_conll(TEST_CONLL)
     combined_dev = combine_examples(dev_examples)
-    sys.stderr.write("unknowns in test\n\n_____________________\n")
     out_conll_file = "{}predicted-{}-targetid-test.conll".format(model_dir, VERSION)
 elif options.mode == "predict":
     assert options.raw_input is not None
@@ -109,11 +86,66 @@ elif options.mode == "predict":
         instances = [make_data_instance(line, i) for i,line in enumerate(fin)]
     out_conll_file = "{}predicted-targets.conll".format(model_dir)
 else:
-    raise Exception("invalid parser mode", options.mode)
+    raise Exception("Invalid parser mode", options.mode)
 
-sys.stderr.write("# unseen, unlearnt test words in vocab: " + str(VOCDICT.num_unks()) + "\n")
-sys.stderr.write("# unseen, unlearnt test POS tags: " + str(POSDICT.num_unks()) + "\n")
-sys.stderr.write("# unseen, unlearnt test lemmas: " + str(LEMDICT.num_unks()) + "\n")
+# Default configurations.
+configuration = {"train": train_conll,
+                 "unk_prob": 0.1,
+                 "dropout_rate": 0.01,
+                 "token_dim": 100,
+                 "pos_dim": 100,
+                 "lemma_dim": 100,
+                 "lstm_input_dim": 100,
+                 "lstm_dim": 100,
+                 "lstm_depth": 2,
+                 "hidden_dim": 100,
+                 "use_dropout": USE_DROPOUT,
+                 "pretrained_embedding_dim": PRETRAINED_DIM,
+                 "num_epochs": 100,
+                 "patience": 25,
+                 "eval_after_every_epochs": 100,
+                 "dev_eval_epoch_frequency": 3}
+configuration_file = os.path.join(model_dir, "configuration.json")
+if options.mode == "train":
+    with open(configuration_file, "w") as fout:
+        fout.write(json.dumps(configuration))
+        fout.close()
+else:
+    json_file = open(configuration_file, "r")
+    configuration = json.load(json_file)
+
+UNK_PROB = configuration["unk_prob"]
+DROPOUT_RATE = configuration["dropout_rate"]
+
+TOK_DIM = configuration["token_dim"]
+POS_DIM = configuration["pos_dim"]
+LEMMA_DIM = configuration["lemma_dim"]
+INPUT_DIM = TOK_DIM + POS_DIM + LEMMA_DIM
+
+LSTM_INP_DIM = configuration["lstm_input_dim"]
+LSTM_DIM = configuration["lstm_dim"]
+LSTM_DEPTH = configuration["lstm_depth"]
+HIDDEN_DIM = configuration["hidden_dim"]
+
+NUM_EPOCHS = configuration["num_epochs"]
+PATIENCE = configuration["patience"]
+EVAL_EVERY_EPOCH = configuration["eval_after_every_epochs"]
+DEV_EVAL_EPOCH = configuration["dev_eval_epoch_frequency"] * EVAL_EVERY_EPOCH
+
+sys.stderr.write("\nPARSER SETTINGS (see {})\n_____________________\n".format(configuration_file))
+for key in configuration:
+    sys.stderr.write("{}:\t{}\n".format(key.upper(), configuration[key]))
+
+sys.stderr.write("\n")
+
+def print_data_status(fsp_dict, vocab_str):
+    sys.stderr.write("# {} = {}\n\tUnseen in dev/test = {}\n\tUnlearnt in dev/test = {}\n".format(
+        vocab_str, fsp_dict.size(), fsp_dict.num_unks()[0], fsp_dict.num_unks()[1]))
+
+print_data_status(VOCDICT, "Tokens")
+print_data_status(POSDICT, "POS tags")
+print_data_status(LEMDICT, "Lemmas")
+sys.stderr.write("\n_____________________\n\n")
 
 
 def get_fn_pos_by_rules(pos, token):
@@ -145,18 +177,18 @@ def get_fn_pos_by_rules(pos, token):
 def check_if_potential_target(lemma):
     """
     Simple check to see if this is a potential position to even consider, based on
-    the LU index provided under FrameNet. Note that since we use NLTK lemmas, 
+    the LU index provided under FrameNet. Note that since we use NLTK lemmas,
     this might be lossy.
     """
     nltk_lem_str = LEMDICT.getstr(lemma)
     return nltk_lem_str in target_lu_map or nltk_lem_str.lower() in target_lu_map
-        
+
 
 def create_lexical_unit(lemma_id, pos_id, token_id):
     """
-    Given a lemma ID and a POS ID (both lemma and POS derived from NLTK), 
+    Given a lemma ID and a POS ID (both lemma and POS derived from NLTK),
     create a LexicalUnit object.
-    If lemma is unknown, then check if token is in the LU vocabulary, and 
+    If lemma is unknown, then check if token is in the LU vocabulary, and
     use it if present (Hack).
     """
     nltk_lem_str = LEMDICT.getstr(lemma_id)
@@ -186,28 +218,27 @@ def create_lexical_unit(lemma_id, pos_id, token_id):
 model = Model()
 trainer = SimpleSGDTrainer(model, 0.01)
 
-v_x = model.add_lookup_parameters((VOCDICT.size(), TOKDIM))
-p_x = model.add_lookup_parameters((POSDICT.size(), POSDIM))
-l_x = model.add_lookup_parameters((LEMDICT.size(), LEMDIM))
+v_x = model.add_lookup_parameters((VOCDICT.size(), TOK_DIM))
+p_x = model.add_lookup_parameters((POSDICT.size(), POS_DIM))
+l_x = model.add_lookup_parameters((LEMDICT.size(), LEMMA_DIM))
 
-if USE_WV:
-    e_x = model.add_lookup_parameters((VOCDICT.size(), PRETDIM))
-    for wordid in wvs:
-        e_x.init_row(wordid, wvs[wordid])
-    w_e = model.add_parameters((LSTMINPDIM, PRETDIM))
-    b_e = model.add_parameters((LSTMINPDIM, 1))
+e_x = model.add_lookup_parameters((VOCDICT.size(), PRETRAINED_DIM))
+for wordid in pretrained_map:
+    e_x.init_row(wordid, pretrained_map[wordid])
+w_e = model.add_parameters((LSTM_INP_DIM, PRETRAINED_DIM))
+b_e = model.add_parameters((LSTM_INP_DIM, 1))
 
-w_i = model.add_parameters((LSTMINPDIM, INPDIM))
-b_i = model.add_parameters((LSTMINPDIM, 1))
+w_i = model.add_parameters((LSTM_INP_DIM, INPUT_DIM))
+b_i = model.add_parameters((LSTM_INP_DIM, 1))
 
 builders = [
-    LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMDIM, model),
-    LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMDIM, model),
+    LSTMBuilder(LSTM_DEPTH, LSTM_INP_DIM, LSTM_DIM, model),
+    LSTMBuilder(LSTM_DEPTH, LSTM_INP_DIM, LSTM_DIM, model),
 ]
 
-w_z = model.add_parameters((HIDDENDIM, 2*LSTMDIM))
-b_z = model.add_parameters((HIDDENDIM, 1))
-w_f = model.add_parameters((2, HIDDENDIM))  # prediction: is a target or not.
+w_z = model.add_parameters((HIDDEN_DIM, 2*LSTM_DIM))
+b_z = model.add_parameters((HIDDEN_DIM, 1))
+w_f = model.add_parameters((2, HIDDEN_DIM))  # prediction: is a target or not.
 b_f = model.add_parameters((2, 1))
 
 
@@ -228,13 +259,12 @@ def identify_targets(builders, tokens, postags, lemmas, gold_targets=None):
     pb_i = parameter(b_i)
 
     emb2_xi = [(pw_i * concatenate([emb_x[i], pos_x[i], lem_x[i]])  + pb_i) for i in xrange(sentlen)]
-    if USE_WV:
-        pw_e = parameter(w_e)
-        pb_e = parameter(b_e)
-        for i in xrange(sentlen):
-            if tokens[i] in wvs:
-                nonupdatedwv = e_x[tokens[i]]  # Prevent the pretrained embeddings from being updated.
-                emb2_xi[i] = emb2_xi[i] + pw_e * nonupdatedwv + pb_e
+    pw_e = parameter(w_e)
+    pb_e = parameter(b_e)
+    for i in xrange(sentlen):
+        if tokens[i] in pretrained_map:
+            nonupdatedwv = e_x[tokens[i]]  # Prevent the pretrained embeddings from being updated.
+            emb2_xi[i] = emb2_xi[i] + pw_e * nonupdatedwv + pb_e
 
     emb2_x = [rectify(emb2_xi[i]) for i in xrange(sentlen)]
 
@@ -267,12 +297,12 @@ def identify_targets(builders, tokens, postags, lemmas, gold_targets=None):
             is_target = np.argmax(logloss.npvalue())
         else:
             is_target = int(i in gold_targets)
-        
+
         if int(np.argmax(logloss.npvalue())) != 0:
             predicted_targets[i] = (create_lexical_unit(lemmas[i], postags[i], tokens[i]), None)
-        
+
         losses.append(pick(logloss, is_target))
-    
+
     objective = -esum(losses) if losses else None
     return objective, predicted_targets
 
@@ -289,12 +319,6 @@ def print_as_conll(gold_examples, predicted_target_dict):
                 conll_file.write(result)
         conll_file.close()
 
-
-# Main method.
-NUMEPOCHS = 100
-PATIENCE = 25
-EVAL_EVERY_EPOCH = 100
-DEV_EVAL_EPOCH = 3 * EVAL_EVERY_EPOCH
 
 best_dev_f1 = 0.0
 if options.mode in ["refresh"]:
@@ -313,7 +337,7 @@ if options.mode in ["train", "refresh"]:
 
     last_updated_epoch = 0
 
-    for epoch in xrange(NUMEPOCHS):
+    for epoch in xrange(NUM_EPOCHS):
         random.shuffle(combined_train)
         for idx, trex in enumerate(combined_train, 1):
             if idx % EVAL_EVERY_EPOCH == 0:
@@ -368,11 +392,11 @@ if options.mode in ["train", "refresh"]:
                     sys.stderr.write(" -- saving to {}".format(model_file_name))
                     model.save(model_file_name)
                     print_as_conll(combined_dev, predictions)
-                    
+
                     last_updated_epoch = epoch
                 sys.stderr.write("\n")
         if epoch - last_updated_epoch > PATIENCE:
-            sys.stderr.write("Ran out of patience, ending training.")
+            sys.stderr.write("Ran out of patience, ending training.\n")
             break
 
 elif options.mode == "test":

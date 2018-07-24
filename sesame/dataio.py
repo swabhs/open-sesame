@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
-import sys, codecs, os
+import codecs
+import os
+import sys
 import xml.etree.ElementTree as et
-from conll09 import *
-from sentence import *
+
 from nltk.corpus import BracketParseCorpusReader
+
+from conll09 import *
 from globalconfig import *
+from sentence import *
 
 def read_conll(conll_file, syn_type=None):
-    sys.stderr.write("Reading {} ...\n".format(conll_file))
+    sys.stderr.write("\nReading {} ...\n".format(conll_file))
 
     read_depsyn = read_constits = False
     if syn_type == "dep":
@@ -54,9 +58,10 @@ def read_conll(conll_file, syn_type=None):
         cf.close()
         # outf.close()
     sys.stderr.write("# examples in %s : %d in %d sents\n" %(conll_file, len(examples), next))
-    sys.stderr.write("# examples with missing arguments : %d\n\n" %missingargs)
+    sys.stderr.write("# examples with missing arguments : %d\n" %missingargs)
     if read_constits: analyze_constits_fes(examples)
     return examples, missingargs, totalexamples
+
 
 def analyze_constits_fes(examples):
     matchspan = 0.0
@@ -85,8 +90,9 @@ def analyze_constits_fes(examples):
     #     sys.stderr.write(CLABELDICT.getstr(phrase) + ":\t" + str(v) + "\n")
     sys.stderr.write("phrases which are constits = %d\n" %(len(matchph)))
 
+
 def create_target_frame_map(luIndex_file,  tf_map):
-    sys.stderr.write("reading the frame - lexunit map from " + LU_INDEX + "...\n")
+    sys.stderr.write("\nReading the frame - lexunit map from " + LU_INDEX + "...\n")
 
     f = open(luIndex_file, "rb")
     #    with codecs.open(luIndex_file, "r", "utf-8") as xml_file: # TODO: why won't this right way of reading work?
@@ -115,8 +121,9 @@ def create_target_frame_map(luIndex_file,  tf_map):
     sys.stderr.write("# max frames per target = " + str(multiplicity) + "\n\n")
     return tf_map
 
+
 def create_target_lu_map():
-    sys.stderr.write("Reading the lexical unit index file: {}\n".format(LU_INDEX))
+    sys.stderr.write("\nReading the lexical unit index file: {}\n".format(LU_INDEX))
 
     lu_index_file = open(LU_INDEX, "rb")
     #    with codecs.open(luIndex_file, "r", "utf-8") as xml_file: # TODO: why won't this right way of reading work?
@@ -185,6 +192,7 @@ def read_fes_lus(frame_file):
 
     return frid, fes, corefes, lus
 
+
 def read_frame_maps():
     sys.stderr.write("reading the frame-element - frame map from " + FRAME_DIR + "...\n")
 
@@ -213,8 +221,9 @@ def read_frame_maps():
                      + " in Frame(" +FRAMEDICT.getstr(longestframe) + ")\n\n")
     return frmfemap, corefrmfemap, lufrmmap
 
+
 def read_related_lus():
-    sys.stderr.write("reading the frame-element - frame map from " + FRAME_DIR + "...\n")
+    sys.stderr.write("\nReading the frame-element - frame map from " + FRAME_DIR + "...\n")
 
     lufrmmap = {}
     maxframes = 0
@@ -276,14 +285,16 @@ def read_related_lus():
 
     return lufrmmap, related_lus
 
+
 def get_wvec_map():
     if not os.path.exists(FILTERED_WVECS_FILE):
-        raise Exception("word vector file not found!", FILTERED_WVECS_FILE)
-    sys.stderr.write("reading the word vectors file from " + FILTERED_WVECS_FILE + "...\n")
+        raise Exception("Pretrained embeddings file not found!", FILTERED_WVECS_FILE)
+    sys.stderr.write("\nReading pretrained embeddings from " + FILTERED_WVECS_FILE + "...\n")
     wvf = open(FILTERED_WVECS_FILE,'r')
     wvf.readline()
     wd_vecs = {VOCDICT.addstr(line.split(' ')[0]) : [float(f) for f in line.strip().split(' ')[1:]] for line in wvf}
     return wd_vecs
+
 
 def get_chains(node, inherit_map, path):
     if node in inherit_map:
@@ -291,8 +302,9 @@ def get_chains(node, inherit_map, path):
             path = get_chains(par, inherit_map, path+[par])
     return path
 
+
 def read_frame_relations():
-    sys.stderr.write("reading inheritance relationships from " + FRAME_REL_FILE + "...\n")
+    sys.stderr.write("\nReading inheritance relationships from " + FRAME_REL_FILE + "...\n")
 
     f = open(FRAME_REL_FILE, "rb")
     #  with codecs.open(luIndex_file, "r", "utf-8") as xml_file:
@@ -361,14 +373,16 @@ def read_frame_relations():
 
     return xpaths, fe_relations
 
+
 def read_brackets(constitfile):
-    sys.stderr.write("reading constituents from " + constitfile + "...\n")
+    sys.stderr.write("\nReading constituents from " + constitfile + "...\n")
     reader = BracketParseCorpusReader(PARSERDATADIR + "rnng/", constitfile)
     parses = reader.parsed_sents()
     return parses
 
+
 def read_ptb():
-    sys.stderr.write("reading PTB data from " + PTBDATADIR + "...\n")
+    sys.stderr.write("\nReading PTB data from " + PTBDATADIR + "...\n")
     sentences = []
     senno = 0
     with codecs.open("ptb.sents", "w", "utf-8") as ptbsf:
