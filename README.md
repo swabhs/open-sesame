@@ -35,9 +35,13 @@ Here, we briefly describe the training for each model. The different models are 
 $ python -m sesame.$MODEL --model_name sample-$MODEL --mode train
 ```
 
-The $MODELs are specified below. Training saves the best model on validation data in the directory `logs/sample-$MODEL/best-$MODEL-1.$x-model`. The same directory will also save a `configurations.json` containing current model configuration. Pre-trained models coming soon.
+The $MODELs are specified below. Training saves the best model on validation data in the directory `logs/sample-$MODEL/best-$MODEL-1.$x-model`. The same directory will also save a `configurations.json` containing current model configuration.
 
 If training gets interrupted, it can be restarted from the last saved checkpoint by specifying `--mode refresh`.
+
+## Pre-trained Models
+
+[Download](http://www.cs.cmu.edu/~sswayamd/open-sesame-v1.1-models/pretrained.tar.gz) and place under `logs/` for target (accuracy = 72.9 on test), frame (accuracy = 86.4 on test, with gold targets) and argument identification (f1 = 60.6 on test with gold targets and frames).
 
 ## Test
 To test under the above model, execute:
