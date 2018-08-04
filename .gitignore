@@ -10,8 +10,7 @@ logs/
 *err
 *log
 *out
-data # could be either a directory or a sym link
-data/
+data
 model_configurations/
 dynet-base/
 alt_*/

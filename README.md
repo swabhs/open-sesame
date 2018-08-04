@@ -14,13 +14,15 @@ $ python -m nltk.downloader averaged_perceptron_tagger wordnet
 
 ## Data Preprocessing
 
-This codebase only handles data in the XML format specified under FrameNet. However, we first reformat the data for ease of readability.
+This codebase only handles data in the XML format specified under FrameNet. The default version used in FrameNet 1.5, but the codebase is compatible with versions 1.6 and 1.7.
 
-1. First, create a `data/` directory here, download FrameNet version 1.$x and place it under `data/fndata-1.$x/`. The default version used in this repository is FN 1.5.
+As a first step the data is preprocessed for ease of readability.
+
+1. First, create a `data/` directory here, download FrameNet version 1.$x and place it under `data/fndata-1.$x/`.
 
 2. Second, this project uses pretrained [GloVe word embeddings](https://nlp.stanford.edu/projects/glove/) of 100 dimensions. Download and extract them under `data/`.
 
-3. Third, make alterations to the configurations in `configurations/global_config.json`, if you have decided to either use a different version of FrameNet, or different pretrained embeddings, etc.
+3. Optionally, make alterations to the configurations in `configurations/global_config.json`, if you have decided to either use a different version of FrameNet, or different pretrained embeddings, etc.
 
 4. Preprocess the data by first converting into a [format similar to CoNLL 2009](https://ufal.mff.cuni.cz/conll2009-st/task-description.html), but with BIO tags, by executing:
 ```sh
@@ -37,7 +39,7 @@ Here, we briefly describe the training for each model. The different models are 
 $ python -m sesame.$MODEL --mode train --model_name sample-$MODEL
 ```
 
-The $MODELs are specified below. Training saves the best model on validation data in the directory `logs/sample-$MODEL/best-$MODEL-1.$x-model`. The same directory will also save a `configurations.json` containing current model configuration. Pre-trained models coming soon.
+The $MODELs are specified below. Training saves the best model on validation data in the directory `logs/sample-$MODEL/best-$MODEL-1.$x-model`. The same directory will also save a `configurations.json` containing current model configuration.
 
 If training gets interrupted, it can be restarted from the last saved checkpoint by specifying `--mode refresh`.
 
