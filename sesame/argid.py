@@ -7,10 +7,10 @@ import time
 from dynet import *
 from optparse import OptionParser
 
-from arksemaforeval import *
 from evaluation import *
-from discreteargidfeats import *
+from discrete_argid_feats import ArgPosition, OutHeads, SpanWidth
 from raw_data import make_data_instance
+from semafor_evaluation import convert_conll_to_frame_elements
 
 
 optpr = OptionParser()
@@ -89,8 +89,8 @@ if USE_HIER:
 lock_dicts()
 # Default labels - in CoNLL format these correspond to _
 UNKTOKEN = VOCDICT.getid(UNK)
-NOTANLU = LUDICT.getid(NOTALABEL)
-NOTANFEID = FEDICT.getid(NOTANFE)  # O in CoNLL format.
+NOTANLU = LUDICT.getid(EMPTY_LABEL)
+NOTANFEID = FEDICT.getid(EMPTY_FE)  # O in CoNLL format.
 
 
 if options.mode in ["train", "refresh"]:
@@ -216,7 +216,7 @@ DEV_EVAL_EPOCHS = configuration["dev_eval_epoch_frequency"] * LOSS_EVAL_EPOCH
 trainexamples = filter_long_ex(trainexamples, USE_SPAN_CLIP, ALLOWED_SPANLEN, NOTANFEID)
 
 sys.stderr.write("\nPARSER SETTINGS (see {})\n_____________________\n".format(configuration_file))
-for key in configuration:
+for key in sorted(configuration):
     sys.stderr.write("{}:\t{}\n".format(key.upper(), configuration[key]))
 
 sys.stderr.write("\n")
@@ -905,8 +905,8 @@ def print_eval_result(examples, expredictions, logger):
 
 logger = open("{}/argid-prediction-analysis.log".format(model_dir), "w")
 
-if options.mode in ["test", "refresh"]:
-    sys.stderr.write("Reusing model from {} ...\n".format(model_file_name))
+if options.mode in ["test", "refresh", "predict"]:
+    sys.stderr.write("Reloading model from {} ...\n".format(model_file_name))
     model.populate(model_file_name)
 
 best_dev_f1 = 0.0
@@ -1059,10 +1059,9 @@ elif options.mode == "test":
     sys.stderr.write("printing frame-elements to " + fe_file + " ...\n")
     convert_conll_to_frame_elements(out_conll_file, fe_file)
     sys.stderr.write("done!\n")
+    logger.close()
 
 elif options.mode == "predict":
-    model.populate(model_file_name)
-
     predictions = []
     for instance in instances:
         prediction = identify_fes(instance.tokens,
@@ -1072,5 +1071,3 @@ elif options.mode == "predict":
     sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
     print_as_conll(instances, predictions)
     sys.stderr.write("Done!\n")
-
-logger.close()

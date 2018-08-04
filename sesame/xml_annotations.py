@@ -2,12 +2,12 @@
 import nltk
 import sys
 
-from globalconfig import NOTALABEL
+from globalconfig import EMPTY_LABEL
 
 lemmatizer = nltk.stem.WordNetLemmatizer()
 
 
-class SentAnno:
+class SentenceAnnotation(object):
 
     def __init__(self, text):
         self.text = text
@@ -26,7 +26,7 @@ class SentAnno:
         self.stindices[st] = len(self.tokens)
         self.enindices[en] = len(self.tokens)
 
-    def normalize_tokens(self):
+    def normalize_tokens(self, logger):
         if len(self.stindices) != len(self.enindices):
             sys.stderr.write("\t\tIssue: overlapping tokenization for multiple tokens\n")
             return
@@ -42,11 +42,11 @@ class SentAnno:
             self.enindices[t] = idx
             end[idx] = t
             if idx > 0 and end[idx - 1] > start[idx]:
-                sys.stderr.write("\t\tIssue: overlapping tokenization of neighboring tokens\n")
+                logger.write("\t\tIssue: overlapping tokenization of neighboring tokens\n")
                 return
             token = self.text[start[idx] : t + 1].strip()
             if " " in token:
-                sys.stderr.write("\t\tIssue: incorrect tokenization "  + token + "\n")
+                logger.write("\t\tIssue: incorrect tokenization "  + token + "\n")
                 return
             if token == "": continue
             self.tokens.append(token)
@@ -75,7 +75,7 @@ class SentAnno:
     def add_postag(self, postag):
         self.foundpos = True
         self.postags.append(postag)
-        
+
     def size(self):
         return len(self.tokens)
 
@@ -83,13 +83,13 @@ class SentAnno:
         if len(self.tokens) <= idx :
             raise Exception("\t\tBug: invalid index", idx)
         if len(self.postags) <= idx:
-            postag = NOTALABEL
+            postag = EMPTY_LABEL
         else:
             postag = self.postags[idx]
         return self.tokens[idx], postag, self.nltkpostags[idx], self.nltklemmas[idx]
-    
 
-class FrameAnno:
+
+class FrameAnnotation(object):
 
     def __init__(self, lu, frame, sent):
         self.lu = lu
@@ -100,11 +100,11 @@ class FrameAnno:
         self.fe = {}
         self.foundfes = False
 
-    def add_fe(self, offset, arglabel):
+    def add_fe(self, offset, arglabel, logger):
         try:
             st, en = self.sent.get_tokens_by_offset(offset)
         except Exception:
-            sys.stderr.write("\t\tIssue: broken tokenization for FE\n")
+            logger.write("\t\tIssue: broken tokenization for FE\n")
             return
         self.foundfes = True
         for idx in xrange(st, en + 1):
@@ -122,16 +122,16 @@ class FrameAnno:
                 self.fe[idx] = "I-" + arglabel
 
 
-    def add_target(self, offset):
+    def add_target(self, offset, logger):
         try:
             st, en = self.sent.get_tokens_by_offset(offset)
         except Exception:
-            sys.stderr.write("\t\tIssue: broken tokenization for target\n")
+            logger.write("\t\tIssue: broken tokenization for target\n")
             return
         self.foundtarget = True
         for idx in xrange(st, en + 1):
             if idx in self.target:
-                sys.stderr.write("\t\tIssue: duplicate target at " + str(idx) + "\n")
+                logger.write("\t\tIssue: duplicate target at " + str(idx) + "\n")
             self.target.add(idx)
 
     def info_at_idx(self, idx):

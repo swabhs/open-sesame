@@ -1,17 +1,25 @@
 # -*- coding: utf-8 -*-
-
 '''
-Reads xml files containing FrameNet 1.x LUs, and converts them to CoNLL format
+Reads XML files containing FrameNet 1.$VERSION annotations, and converts them to a CoNLL 2009-like format.
 '''
-import os.path
 import codecs
-import xml.etree.ElementTree as et
+import os.path
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
+import xml.etree.ElementTree as et
+from optparse import OptionParser
 
 from globalconfig import *
-from xmlannotations import *
+from xml_annotations import FrameAnnotation, SentenceAnnotation
+
+
+optpr = OptionParser()
+optpr.add_option("--filter_embeddings", action="store_true", default=False)
+optpr.add_option("--exemplar", action="store_true", default=False)
+(options, args) = optpr.parse_args()
+
+logger = open("preprocess-fn{}.log".format(VERSION), "w")
 
 trainf = TRAIN_EXEMPLAR
 ftetrainf = TRAIN_FTE
@@ -23,14 +31,20 @@ ftetrainsentf = TRAIN_FTE + ".sents"
 devsentf = DEV_CONLL + ".sents"
 testsentf = TEST_CONLL + ".sents"
 
-DEVSELECTPROB = 0.0
 relevantfelayers = ["Target", "FE"]
 relevantposlayers = ["BNC", "PENN"]
 ns = {'fn' : 'http://framenet.icsi.berkeley.edu'}
 
-
-firsts = {trainf:True, devf:True, testf:True, ftetrainf:True}
-sizes = {trainf:0, devf:0, testf:0, ftetrainf:0}
+firsts = {trainf : True,
+          devf : True,
+          testf : True,
+          ftetrainf : True}
+sizes = {trainf : 0,
+         devf : 0,
+         testf : 0,
+         ftetrainf : 0}
+totsents = numsentsreused = fspno = numlus = 0.0
+isfirst = isfirstsent = True
 
 
 def write_to_conll(outf, fsp, firstex, sentid):
@@ -70,7 +84,7 @@ def process_xml_labels(label, layertype):
         st = int(label.attrib["start"])
         en = int(label.attrib["end"])
     except KeyError:
-        sys.stderr.write("\t\tIssue: start and/or end labels missing in " + layertype + "\n")
+        logger.write("\t\tIssue: start and/or end labels missing in " + layertype + "\n")
         return
     return (st, en)
 
@@ -81,7 +95,7 @@ def process_sent(sent, outsentf, isfirstsent):
         senttext = t.text
 
     write_to_sent_file(outsentf, senttext, isfirstsent)
-    sentann = SentAnno(senttext)
+    sentann = SentenceAnnotation(senttext)
 
     for anno in sent.findall('fn:annotationSet', ns):
         for layer in anno.findall('fn:layer', ns):
@@ -91,8 +105,8 @@ def process_sent(sent, outsentf, isfirstsent):
                     startend = process_xml_labels(label, layertype)
                     sentann.add_token(startend)
                     sentann.add_postag(label.attrib["name"])
-                if sentann.normalize_tokens() is None:
-                    sys.stderr.write("\t\tSkipping: incorrect tokenization\n")
+                if sentann.normalize_tokens(logger) is None:
+                    logger.write("\t\tSkipping: incorrect tokenization\n")
                     return
                 break
         if sentann.foundpos:
@@ -100,7 +114,7 @@ def process_sent(sent, outsentf, isfirstsent):
 
     if not sentann.foundpos:
         # TODO do some manual tokenization
-        sys.stderr.write("\t\tSkipping: missing POS tags and hence tokenization\n")
+        logger.write("\t\tSkipping: missing POS tags and hence tokenization\n")
         return
     return sentann
 
@@ -129,8 +143,8 @@ def get_all_fsps_in_sent(sent, sentann, fspno, lex_unit, frame, isfulltextann, c
                 if frame == "Test35": continue # bogus frame
             else:
                 continue
-            sys.stderr.write("\tannotation: " + str(anno_id) + "\t" + frame + "\t" + lex_unit + "\n")
-        fsp = FrameAnno(lex_unit, frame, sentann)
+            logger.write("\tannotation: " + str(anno_id) + "\t" + frame + "\t" + lex_unit + "\n")
+        fsp = FrameAnnotation(lex_unit, frame, sentann)
 
         for layer in anno.findall('fn:layer', ns): # not a real loop
             layertype = layer.attrib["name"]
@@ -141,29 +155,29 @@ def get_all_fsps_in_sent(sent, sentann, fspno, lex_unit, frame, isfulltextann, c
                     startend = process_xml_labels(label, layertype)
                     if startend is None:
                         break
-                    fsp.add_target(startend)
+                    fsp.add_target(startend, logger)
             elif layer.attrib["name"] == "FE" and layer.attrib["rank"] == "1":
                 for label in layer.findall('fn:label', ns):
                     startend = process_xml_labels(label, layertype)
                     if startend is None:
                         if "itype" in label.attrib:
-                            sys.stderr.write("\t\tIssue: itype = " + label.attrib["itype"] + "\n")
+                            logger.write("\t\tIssue: itype = " + label.attrib["itype"] + "\n")
                             continue
                         else:
                             break
-                    fsp.add_fe(startend, label.attrib["name"])
+                    fsp.add_fe(startend, label.attrib["name"], logger)
 
         if not fsp.foundtarget:
-            sys.stderr.write("\t\tSkipping: missing target\n")
+            logger.write("\t\tSkipping: missing target\n")
             continue
         if not fsp.foundfes:
-            sys.stderr.write("\t\tIssue: missing FSP annotations\n")
+            logger.write("\t\tIssue: missing FSP annotations\n")
         if fsp not in fspset:
             fspno += 1
             fsps[anno_id] = fsp
             fspset.add(fsp)
         else:
-            sys.stderr.write("\t\tRepeated frames encountered for same sentence\n")
+            logger.write("\t\tRepeated frames encountered for same sentence\n")
 
     return numannosets, fspno, fsps
 
@@ -180,8 +194,8 @@ def get_annoids(filelist, outf, outsentf):
     isfirstsentex = True
 
     for tfname in filelist:
-        tfname = FTEDIR + tfname
-        sys.stderr.write("\n" + tfname + "\n")
+        tfname = FULLTEXT_DIR + tfname
+        logger.write("\n" + tfname + "\n")
         if not os.path.isfile(tfname):
             continue
         with codecs.open(tfname, 'rb', 'utf-8') as xml_file:
@@ -190,7 +204,7 @@ def get_annoids(filelist, outf, outsentf):
         root = tree.getroot()
         for sentence in root.iter('{http://framenet.icsi.berkeley.edu}sentence'):
             numsents += 1
-            sys.stderr.write("sentence:\t" + str(sentence.attrib["ID"]) + "\n")
+            logger.write("sentence:\t" + str(sentence.attrib["ID"]) + "\n")
             for annotation in sentence.iter('{http://framenet.icsi.berkeley.edu}annotationSet'):
                 annotation_id = annotation.attrib["ID"]
                 if annotation_id == "2019791" and VERSION == "1.5":
@@ -203,7 +217,7 @@ def get_annoids(filelist, outf, outsentf):
             isfirstsentex = False
             if sentann is None:
                 invalidsents += 1
-                sys.stderr.write("\t\tIssue: Token-level annotations not found\n")
+                logger.write("\t\tIssue: Token-level annotations not found\n")
                 continue
 
             # get all the different FSP annotations in the sentence
@@ -218,34 +232,34 @@ def get_annoids(filelist, outf, outsentf):
                 sizes[outf] += 1
                 isfirstex = False
         xml_file.close()
-    sys.stdout.write("# total sents processed = %d\n" %numsents)
-    sys.stdout.write("# repeated sents        = %d\n" %repeated)
-    sys.stdout.write("# invalid sents         = %d\n" %invalidsents)
-    sys.stdout.write("# sents in set          = %d\n" %len(sents))
-    sys.stdout.write("# annotations           = %d\n" %totfsps)
+    sys.stderr.write("# total sents processed = %d\n" %numsents)
+    sys.stderr.write("# repeated sents        = %d\n" %repeated)
+    sys.stderr.write("# invalid sents         = %d\n" %invalidsents)
+    sys.stderr.write("# sents in set          = %d\n" %len(sents))
+    sys.stderr.write("# annotations           = %d\n" %totfsps)
     return annos
 
 
 def process_fulltext():
-    sys.stdout.write("\nReading fulltext data...\n")
+    sys.stderr.write("\nReading {} fulltext data ...\n".format(VERSION))
 
     # read and write all the test examples in conll
-    sys.stderr.write("\n\nTEST\n\n")
-    sys.stdout.write("TEST\n")
-    test_annos = get_annoids(TESTFILES, testf, testsentf)
+    logger.write("\n\nTEST\n\n")
+    sys.stderr.write("TEST\n")
+    test_annos = get_annoids(TEST_FILES, testf, testsentf)
 
     # read and write all the dev examples in conll
-    sys.stderr.write("\n\nDEV\n\n")
-    sys.stdout.write("DEV\n")
-    dev_annos = get_annoids(DEVFILES, devf, devsentf)
+    logger.write("\n\nDEV\n\n")
+    sys.stderr.write("DEV\n")
+    dev_annos = get_annoids(DEV_FILES, devf, devsentf)
 
     # read all the full-text train examples in conll
     train_fte_files = []
-    for f in os.listdir(FTEDIR):
-        if f not in TESTFILES and f not in DEVFILES and not f.endswith("xsl"):
+    for f in os.listdir(FULLTEXT_DIR):
+        if f not in TEST_FILES and f not in DEV_FILES and not f.endswith("xsl"):
             train_fte_files.append(f)
-    sys.stderr.write("\n\nFULLTEXT TRAIN\n\n")
-    sys.stdout.write("FULLTEXT TRAIN\n")
+    logger.write("\n\nFULLTEXT TRAIN\n\n")
+    sys.stderr.write("FULLTEXT TRAIN\n")
     get_annoids(train_fte_files, ftetrainf, ftetrainsentf)
 
     return dev_annos, test_annos
@@ -260,20 +274,20 @@ def process_lu_xml(lufname, dev_annos, test_annos):
 
     frame = root.attrib["frame"]
     lex_unit = root.attrib["name"]
-    sys.stderr.write("\n" + lufname + "\t" + frame + "\t" + lex_unit + "\n")
+    logger.write("\n" + lufname + "\t" + frame + "\t" + lex_unit + "\n")
 
     sentno = 0
     for sent in root.iter('{http://framenet.icsi.berkeley.edu}sentence'):
         sentno += 1
         # get the tokenization and pos tags for a sentence
         sent_id = sent.attrib["ID"]
-        sys.stderr.write("sentence:\t" + str(sent_id) + "\n")
+        logger.write("sentence:\t" + str(sent_id) + "\n")
 
         sentann = process_sent(sent, trainsentf, isfirstsent)
         isfirstsent = False
 
         if sentann is None:
-            sys.stderr.write("\t\tIssue: Token-level annotations not found\n")
+            logger.write("\t\tIssue: Token-level annotations not found\n")
             continue
 
         # get all the different FSP annotations in the sentence
@@ -291,7 +305,7 @@ def process_lu_xml(lufname, dev_annos, test_annos):
     numlus += 1
     xml_file.close()
 
-    sys.stderr.write(lufname + ": total sents = " + str(sentno) + "\n")
+    logger.write(lufname + ": total sents = " + str(sentno) + "\n")
     totsents += sentno
 
 
@@ -299,70 +313,73 @@ def process_exemplars(dev_annos, test_annos):
     global totsents, numsentsreused, fspno, numlus, isfirst
     # get the names of all LU xml files
     all_lus = []
-    for f in os.listdir(LUDIR):
-        luf = os.path.join(LUDIR, f)
+    for f in os.listdir(LU_DIR):
+        luf = os.path.join(LU_DIR, f)
         if luf.endswith("xsl"):
             continue
         all_lus.append(luf)
-    sys.stdout.write("\nReading exemplar data from " + str(len(all_lus)) + " LU files...\n")
+    sys.stderr.write("\nReading exemplar data from " + str(len(all_lus)) + " LU files...\n")
 
-    sys.stderr.write("\n\nTRAIN EXEMPLAR\n\n")
+    logger.write("\n\nTRAIN EXEMPLAR\n\n")
     for i, luname in enumerate(sorted(all_lus), 1):
         if i % 1000 == 0:
-            sys.stdout.write(str(i) + "...")
+            sys.stderr.write(str(i) + "...")
         if not os.path.isfile(luname):
-            sys.stderr.write("\t\tIssue: Couldn't find " + luname + " - strange, terminating!\n")
+            logger.write("\t\tIssue: Couldn't find " + luname + " - strange, terminating!\n")
             break
         process_lu_xml(luname, dev_annos, test_annos)
 
-    sys.stdout.write("\n\n# total LU sents = " + str(totsents) + "\n")
-    sys.stdout.write("# total LU FSPs = " + str(fspno) + "\n")
-    sys.stdout.write("# total LU files = " + str(numlus) + "\n")
-    sys.stdout.write("average # FSPs per LU = " + str(fspno / numlus) + "\n")
-    sys.stdout.write("# LU sents reused for multiple annotations = " + str(numsentsreused) + "\n")
-    sys.stdout.write("\noutput file sizes:\n")
+    sys.stderr.write("\n\n# total LU sents = " + str(totsents) + "\n")
+    sys.stderr.write("# total LU FSPs = " + str(fspno) + "\n")
+    sys.stderr.write("# total LU files = " + str(numlus) + "\n")
+    sys.stderr.write("average # FSPs per LU = " + str(fspno / numlus) + "\n")
+    sys.stderr.write("# LU sents reused for multiple annotations = " + str(numsentsreused) + "\n")
+    sys.stderr.write("\noutput file sizes:\n")
     for s in sizes:
-        sys.stdout.write(s + ":\t" + str(sizes[s]) + "\n")
-    sys.stdout.write("\n")
+        sys.stderr.write(s + ":\t" + str(sizes[s]) + "\n")
+    sys.stderr.write("\n")
 
 
-def preprocess_wvf(ws):
+def filter_embeddings(embedding_files):
     """
-    read the train, dev and test files, along with the word vectors to find which words to retain vectors for.
-    :return:
+    Filters the embeddings file to retain only the vocabulary in the train, dev and test files.
     """
-    sys.stdout.write("Reading FrameNet vocabulary...\n")
-    reqdtoks = set([])
-    corpora = [DEV_CONLL, TRAIN_FTE, TEST_CONLL]
-    for c in corpora:
-        with codecs.open(c, "r", "utf-8") as cf:
-            ctoks = [line.split("\t")[1].lower() for line in cf  if line != "\n"]
+    sys.stderr.write("\nReading FrameNet {} vocabulary...\n".format(VERSION))
+    vocab = set([])
+    corpora = [DEV_CONLL, TRAIN_FTE, TRAIN_EXEMPLAR, TEST_CONLL]
+    for corpus in corpora:
+        with codecs.open(corpus, "r", "utf-8") as cf:
+            tokens = [line.split("\t")[1].lower() for line in cf  if line != "\n"]
             cf.close()
-        reqdtoks.update(ctoks)
-    sys.stdout.write("\ntotal(train+dev+test) vocabulary size = " + str(len(reqdtoks)) + "\nfiltering out the word vectors...")
+        vocab.update(tokens)
+    sys.stderr.write("\nTotal (train + dev + test) vocabulary size = {}\nFiltering out the word vectors ...".format(len(vocab)))
 
-    #ws = ["glove.6B.100d.txt", "glove.6B.50d.txt",  "glove.840B.300d.txt", "glove.6B.200d.txt"]
-    for w in ws:
-        wvf = open(DATADIR + w, 'r')
-        newwvf = DATADIR + w[:-3] + "framevocab.txt"
-        filtered_wvf = open(newwvf, 'w')
-        numwv = 0
-        for l in wvf:
+    for emb_file in embedding_files:
+        embeddings_file = open(DATA_DIR + emb_file, 'r')
+        new_embeddings_file = DATA_DIR.split(".txt")[0] + VERSION + ".framevocab.txt"
+        filtered_embeddings = open(new_embeddings_file, 'w')
+        num_embeddings = 0
+        for l in embeddings_file:
             fields = l.strip().split(' ')
             wd = fields[0].lower()
-            if wd in reqdtoks:
-                filtered_wvf.write(l)
-                numwv +=1
-        wvf.close()
-        filtered_wvf.close()
-        sys.stdout.write("\ntotal num word vectors in file " + newwvf + " = " + str(numwv) + "\n")
+            if wd in vocab:
+                filtered_embeddings.write(l)
+                num_embeddings += 1
+        embeddings_file.close()
+        filtered_embeddings.close()
+        sys.stderr.write("\nTotal embeddings in {} = {}\n".format(new_embeddings_file, num_embeddings))
 
 
-dev, test = process_fulltext()
+if __name__ == "__main__":
+    if not os.path.exists(PARSER_DATA_DIR):
+        os.makedirs(PARSER_DATA_DIR)
 
-totsents = numsentsreused = fspno = numlus = 0.0
-isfirst = isfirstsent = True
-process_exemplars(dev, test)
+    dev, test = process_fulltext()
 
-if len(sys.argv) >= 2:
-   preprocess_wvf([sys.argv[1]])
+    if options.exemplar:
+        process_exemplars(dev, test)
+
+    if options.filter_embeddings:
+        filter_embeddings([EMBEDDINGS_FILE])
+
+    logger.close()

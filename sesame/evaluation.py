@@ -226,7 +226,7 @@ if __name__ == "__main__":
     corp_lp, corp_lr, corp_lf, \
     corp_wp, corp_wr, corp_wf, \
     corp_ures, corp_labldres, corp_tokres = evaluate_corpus_argid(
-        goldexamples, predfes, coreffmap, FEDICT.getid(NOTANFE))
+        goldexamples, predfes, coreffmap, FEDICT.getid(EMPTY_FE))
 
     sys.stderr.write("\n[test] wpr = %.5f (%6.1f/%6.1f) wre = %.5f (%6.1f/%6.1f) wf1 = %.5f\n"
                      "[test] upr = %.5f (%6.1f/%6.1f) ure = %.5f (%6.1f/%6.1f) uf1 = %.5f\n"

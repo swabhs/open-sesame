@@ -3,9 +3,9 @@ import codecs
 import globalconfig as gc
 import sys
 
-def read_sents(sentfile):
+def read_sents(sent_file):
     sentences = []
-    with codecs.open(sentfile, "r", "utf-8") as sentf:
+    with codecs.open(sent_file, "r", "utf-8") as sentf:
         for line in sentf:
             words = line.strip().split()
             sentences.append(words)
@@ -13,13 +13,13 @@ def read_sents(sentfile):
     print "number of sentences", len(sentences)
     return sentences
 
-def readfefile(fefile):
+def read_fe_file(fe_file):
     # format:1   0.0 4   Measure_mass    pound.n 15  pounds  742 Count   14  Unit    15  Stuff   16:17
     #        crap   crap    numframesfes    frame   lu  targetpos target  sentnum fename  fepos
-    frames={}
+    frames = {}
     tfdict1 = {}
     sent1 = None
-    with codecs.open(fefile, "r", "utf-8") as fef:
+    with codecs.open(fe_file, "r", "utf-8") as fef:
         numframes = 0
         for line in fef:
             fields = line.strip().split("\t")
@@ -43,7 +43,7 @@ def readfefile(fefile):
         fef.close()
     return frames, tfdict1, sent1
 
-def join_dipfe_testconll(conllfile, frames, tfdict1, sent1, outfile):
+def join_google_fe_test_conll(conllfile, frames, tfdict1, sent1, outfile):
     with codecs.open(outfile, "w", "utf-8") as outf:
         with codecs.open(conllfile, "r", "utf-8") as cf:
             for l in cf:
@@ -58,23 +58,23 @@ def join_dipfe_testconll(conllfile, frames, tfdict1, sent1, outfile):
 
                 sent_num = int(cfields[6])
                 position = int(cfields[0])-1
-                if sent_num in frames and position in frames[sent_num] and cfields[12] != gc.NOTALABEL:
+                if sent_num in frames and position in frames[sent_num] and cfields[12] != gc.EMPTY_LABEL:
                     newfields.append(cfields[12]) # keep our LUs but use their frames.
                     newfields.append(frames[sent_num][position][0])
-                    newfields.append(gc.NOTANFE)
+                    newfields.append(gc.EMPTY_FE)
                 elif sent_num == sent1 and position in tfdict1:
                     newfields.append(cfields[12]) # keep our LUs but use their frames.
                     newfields.append(tfdict1[position][0])
-                    newfields.append(gc.NOTANFE)
+                    newfields.append(gc.EMPTY_FE)
                 else:
-                    newfields += [gc.NOTALABEL, gc.NOTALABEL, gc.NOTANFE] # FILLPRED PRED APREDS = 12,13,14
+                    newfields += [gc.EMPTY_LABEL, gc.EMPTY_LABEL, gc.EMPTY_FE] # FILLPRED PRED APREDS = 12,13,14
                 if len(newfields) != len(cfields):
                     raise Exception("didn't join properly", len(newfields), len(cfields), newfields)
                 outf.write("\t".join(newfields) + "\n")
             cf.close()
         outf.close()
 
-def writeconllish(sents, frames, tfdict1, sent1):
+def write_tab_separated(sents, frames, tfdict1, sent1):
     '''
     this one is for Michael Roth to carry out his experiments
     :param sents:
@@ -108,6 +108,5 @@ def writeconllish(sents, frames, tfdict1, sent1):
         outf.close()
 
 s = read_sents(sys.argv[1])
-f, t1, s1 = readfefile(sys.argv[2])
-# writeconllish(s,f,t1,s1)
-join_dipfe_testconll(sys.argv[3], f, t1, s1, "dip.predictedframes.conll")
+f, t1, s1 = read_fe_file(sys.argv[2])
+join_google_fe_test_conll(sys.argv[3], f, t1, s1, "dip.predictedframes.conll")

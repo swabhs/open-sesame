@@ -5,10 +5,10 @@ import sys
 import time
 from optparse import OptionParser
 
-from arksemaforeval import *
 from dynet import *
 from evaluation import *
 from raw_data import make_data_instance
+from semafor_evaluation import convert_conll_to_frame_elements
 
 
 optpr = OptionParser()
@@ -137,7 +137,7 @@ EVAL_EVERY_EPOCH = configuration["eval_after_every_epochs"]
 DEV_EVAL_EPOCH = configuration["dev_eval_epoch_frequency"] * EVAL_EVERY_EPOCH
 
 sys.stderr.write("\nPARSER SETTINGS (see {})\n_____________________\n".format(configuration_file))
-for key in configuration:
+for key in sorted(configuration):
     sys.stderr.write("{}:\t{}\n".format(key.upper(), configuration[key]))
 
 sys.stderr.write("\n")
@@ -159,7 +159,7 @@ def get_fn_pos_by_rules(pos, token):
     """
     if pos[0] == "v" or pos in ["rp", "ex", "md"]:  # Verbs
         rule_pos = "v"
-    elif pos[0] == "n" or pos in ["$", ":", "sym", "uh"]:  # Nouns
+    elif pos[0] == "n" or pos in ["$", ":", "sym", "uh", "wp"]:  # Nouns
         rule_pos = "n"
     elif pos[0] == "j" or pos in ["ls", "pdt", "rbr", "rbs", "prp"]:  # Adjectives
         rule_pos = "a"
@@ -326,7 +326,7 @@ def print_as_conll(gold_examples, predicted_target_dict):
 
 best_dev_f1 = 0.0
 if options.mode in ["refresh"]:
-    sys.stderr.write("Reusing model from {} ...\n".format(model_file_name))
+    sys.stderr.write("Reloading model from {} ...\n".format(model_file_name))
     model.populate(model_file_name)
     with open(os.path.join(model_dir, "best-dev-f1.txt"), "r") as fin:
         for line in fin:
@@ -404,6 +404,7 @@ if options.mode in ["train", "refresh"]:
             break
 
 elif options.mode == "test":
+    sys.stderr.write("Reading model from {} ...\n".format(model_file_name))
     model.populate(model_file_name)
     corpus_tp_fp_fn = [0.0, 0.0, 0.0]
 
@@ -429,6 +430,7 @@ elif options.mode == "test":
     sys.stderr.write("Done!\n")
 
 elif options.mode == "predict":
+    sys.stderr.write("Reading model from {} ...\n".format(model_file_name))
     model.populate(model_file_name)
 
     predictions = []

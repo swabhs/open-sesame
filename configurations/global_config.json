@@ -1,0 +1,6 @@
+{
+    "version": 1.5,
+    "data_directory": "data/",
+    "embeddings_file": "data/glove.6B.100d.txt",
+    "debug_mode": false
+}

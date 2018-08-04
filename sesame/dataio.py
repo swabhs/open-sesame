@@ -2,6 +2,7 @@
 import codecs
 import os
 import sys
+import tarfile
 import xml.etree.ElementTree as et
 
 from nltk.corpus import BracketParseCorpusReader
@@ -69,7 +70,7 @@ def analyze_constits_fes(examples):
     matchph = {}
     for ex in examples:
         for fe in ex.invertedfes:
-            if fe == FEDICT.getid(NOTALABEL): continue
+            if fe == FEDICT.getid(EMPTY_LABEL): continue
             for span in ex.invertedfes[fe]:
                 if span in ex.sentence.constitspans:
                     matchspan += 1
@@ -92,7 +93,7 @@ def analyze_constits_fes(examples):
 
 
 def create_target_frame_map(luIndex_file,  tf_map):
-    sys.stderr.write("\nReading the frame - lexunit map from " + LU_INDEX + "...\n")
+    sys.stderr.write("\nReading the frame - lexunit map from " + LU_INDEX + " ...\n")
 
     f = open(luIndex_file, "rb")
     #    with codecs.open(luIndex_file, "r", "utf-8") as xml_file: # TODO: why won't this right way of reading work?
@@ -194,7 +195,7 @@ def read_fes_lus(frame_file):
 
 
 def read_frame_maps():
-    sys.stderr.write("reading the frame-element - frame map from " + FRAME_DIR + "...\n")
+    sys.stderr.write("\nReading the frame-element - frame map from {} ...\n".format(FRAME_DIR))
 
     frmfemap = {}
     corefrmfemap = {}
@@ -217,13 +218,12 @@ def read_frame_maps():
                 lufrmmap[l] = []
             lufrmmap[l].append(frm)
 
-    sys.stderr.write("# max FEs for frame: "  + str(maxfesforframe)
-                     + " in Frame(" +FRAMEDICT.getstr(longestframe) + ")\n\n")
+    sys.stderr.write("Max! {} frame-elements for frame: {}\n\n".format(maxfesforframe, FRAMEDICT.getstr(longestframe)))
     return frmfemap, corefrmfemap, lufrmmap
 
 
 def read_related_lus():
-    sys.stderr.write("\nReading the frame-element - frame map from " + FRAME_DIR + "...\n")
+    sys.stderr.write("\nReading the frame-element - frame map from " + FRAME_DIR + " ...\n")
 
     lufrmmap = {}
     maxframes = 0
@@ -263,23 +263,8 @@ def read_related_lus():
                     related_lus[l] = set([])
                 related_lus[l].update(frmlumap[frm])
 
-    # print "lu-frame", LUDICT.getstr(lufrmmap.items()[0][0])
-    # for x in lufrmmap.items()[0][1]:
-    #     print FRAMEDICT.getstr(x),
-    # print
-    #
-    # print "frame-lu", FRAMEDICT.getstr(frmlumap.items()[0][0])
-    # for x in frmlumap.items()[0][1]:
-    #     print LUDICT.getstr(x),
-    # print
-    #
-    # print "lu-lu", LUDICT.getstr(related_lus.items()[0][0])
-    # for x in related_lus.items()[0][1]:
-    #     print LUDICT.getstr(x),
-    # print
-
-    sys.stderr.write("# max frames for LU: %d in LU(%s)\n"
-                     "# max LUs for frame: %d in Frame(%s)\n"
+    sys.stderr.write("# max frames for LU: %d in LU (%s)\n"
+                     "# max LUs for frame: %d in Frame (%s)\n"
                      % (maxframes, LUDICT.getstr(longestlu),
                         maxlus, FRAMEDICT.getstr(longestfrm)))
 
@@ -287,12 +272,18 @@ def read_related_lus():
 
 
 def get_wvec_map():
-    if not os.path.exists(FILTERED_WVECS_FILE):
-        raise Exception("Pretrained embeddings file not found!", FILTERED_WVECS_FILE)
-    sys.stderr.write("\nReading pretrained embeddings from " + FILTERED_WVECS_FILE + "...\n")
-    wvf = open(FILTERED_WVECS_FILE,'r')
+    if not os.path.exists(EMBEDDINGS_FILE):
+        raise Exception("Pretrained embeddings file not found!", EMBEDDINGS_FILE)
+    sys.stderr.write("\nReading pretrained embeddings from {} ...\n".format(EMBEDDINGS_FILE))
+    if EMBEDDINGS_FILE.endswith('txt'):
+        embs_file = EMBEDDINGS_FILE
+    else:
+        raise Exception('Pretrained embeddings file needs to be a text file, not archive!',
+                        EMBEDDINGS_FILE)
+    wvf = open(embs_file, 'r')
     wvf.readline()
-    wd_vecs = {VOCDICT.addstr(line.split(' ')[0]) : [float(f) for f in line.strip().split(' ')[1:]] for line in wvf}
+    wd_vecs = {VOCDICT.addstr(line.split(' ')[0]) :
+                [float(f) for f in line.strip().split(' ')[1:]] for line in wvf}
     return wd_vecs
 
 
@@ -304,7 +295,7 @@ def get_chains(node, inherit_map, path):
 
 
 def read_frame_relations():
-    sys.stderr.write("\nReading inheritance relationships from " + FRAME_REL_FILE + "...\n")
+    sys.stderr.write("\nReading inheritance relationships from {} ...\n".format(FRAME_REL_FILE))
 
     f = open(FRAME_REL_FILE, "rb")
     #  with codecs.open(luIndex_file, "r", "utf-8") as xml_file:
@@ -323,10 +314,8 @@ def read_frame_relations():
     fepaths = {}
 
     for reltype in root.iter('{http://framenet.icsi.berkeley.edu}frameRelationType'):
-        #if reltype.attrib["name"] in ["ReFraming_Mapping", "Precedes"]:
         if reltype.attrib["name"] != "Inheritance":
             continue
-
 
         for relation in reltype.findall('{http://framenet.icsi.berkeley.edu}frameRelation'):
             sub_frame = FRAMEDICT.addstr(relation.attrib["subFrameName"])
@@ -375,21 +364,21 @@ def read_frame_relations():
 
 
 def read_brackets(constitfile):
-    sys.stderr.write("\nReading constituents from " + constitfile + "...\n")
-    reader = BracketParseCorpusReader(PARSERDATADIR + "rnng/", constitfile)
+    sys.stderr.write("\nReading constituents from " + constitfile + " ...\n")
+    reader = BracketParseCorpusReader(PARSER_DATA_DIR + "rnng/", constitfile)
     parses = reader.parsed_sents()
     return parses
 
 
 def read_ptb():
-    sys.stderr.write("\nReading PTB data from " + PTBDATADIR + "...\n")
+    sys.stderr.write("\nReading PTB data from " + PTB_DATA_DIR + " ...\n")
     sentences = []
     senno = 0
     with codecs.open("ptb.sents", "w", "utf-8") as ptbsf:
-        for constitfile in os.listdir(PTBDATADIR):
-            reader = BracketParseCorpusReader(PTBDATADIR, constitfile)
+        for constitfile in os.listdir(PTB_DATA_DIR):
+            reader = BracketParseCorpusReader(PTB_DATA_DIR, constitfile)
             parses = reader.parsed_sents()
-            # todo map from parses to sentences
+            # TODO: map from parses to sentences
             for p in parses:
                 ptbsf.write(" ".join(p.leaves()) + "\n")
                 tokpos = p.pos()
@@ -399,7 +388,6 @@ def read_ptb():
                 s.get_all_parts_of_ctree(p, CLABELDICT, False)
                 sentences.append(s)
                 senno += 1
-            # if senno >= 100: break
         sys.stderr.write("# PTB sentences: %d\n" %len(sentences))
         ptbsf.close()
     return sentences

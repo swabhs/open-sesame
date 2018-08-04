@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from globalconfig import *
-
+from globalconfig import DEBUG_MODE
 
 class LexicalUnit(object):
 
@@ -70,7 +69,7 @@ class FrameSemParse(object):
         self.tokens = sentence.tokens
         self.postags = sentence.postags
         self.lemmas = sentence.lemmas
-        # TODO(Swabha): clunky, there should be some inheritance, etc.
+        # TODO(Swabha): add some inheritance, etc.
         self.sentence = sentence
         self.targetframedict = {}  # map of target position and frame-id
         self.frame = None
@@ -78,24 +77,6 @@ class FrameSemParse(object):
         # self.fes = {} # map of FE position to a map between FE-type(BIOS) and the label
         self.numargs = 0
         self.modifiable = True  # to differentiate between gold and predicted
-
-    def print_example(self, vocdict, ludict, fedict, framedict):
-        if not DEBUGMODE:
-            return
-        for t in self.tokens:
-            print vocdict.getstr(t),
-        print
-        for tf in self.targetframedict:
-            t, f = self.targetframedict[tf]
-            print "LexUnit: ", ludict.getstr(t.id)
-            print "Frame: ", f.get_str(framedict),
-        print
-        # for fe in self.fes:
-        #     print "FE:", fedict.getstr(fe.id),
-        #     for span in self.fes[fe]:
-        #         for pos in span:
-        #             print vocdict.getstr(self.tokens[pos])
-        # print
 
     def add_target(self, targetpos, luid, lupos, frameid):
         if not self.modifiable:
@@ -113,15 +94,6 @@ class FrameSemParse(object):
             raise Exception("different LU ID than original", self.lu.id, luid)
         self.lu = LexicalUnit(luid, lupos)
         self.targetframedict[targetpos] = (self.lu, self.frame)
-
-    def add_fe(self, felabelid, festartpos, feendpos):
-        if not self.modifiable:
-            raise Exception('attempt to add argument to unmodifiable example')
-        fe = FrameElement(felabelid)
-        if fe not in self.fes:
-            self.fes[fe] = []
-        self.fes[fe].append((festartpos, feendpos))
-        self.numargs += 1
 
     def get_only_targets(self):
         if self.modifiable:

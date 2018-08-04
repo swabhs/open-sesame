@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from framesemparse import *
 from copy import deepcopy
+
+from frame_semantic_graph import LexicalUnit, Frame, FrameElement, FrameSemParse
 from housekeeping import *
 
 VOCDICT = FspDict()
@@ -29,13 +30,13 @@ class CoNLL09Element:
         self.nltk_pos = POSDICT.addstr(ele[5])
         self.sent_num = int(ele[6])
 
-        self.dephead = NOTALABEL
-        self.deprel = NOTALABEL
+        self.dephead = EMPTY_LABEL
+        self.deprel = EMPTY_LABEL
         if read_depsyn:
             self.dephead = int(ele[9])
             self.deprel = DEPRELDICT.addstr(ele[11])
 
-        self.is_pred = (ele[12] != NOTALABEL)
+        self.is_pred = (ele[12] != EMPTY_LABEL)
         if self.is_pred:
             lufields = ele[12].split(".")
         self.lu = LUDICT.addstr(lufields[0])
@@ -43,8 +44,8 @@ class CoNLL09Element:
         self.frame = FRAMEDICT.addstr(ele[13])
 
         # BIOS scheme
-        self.is_arg = (ele[14] != NOTANFE)
-        self.argtype = ARGTYPES[ele[14][0]]
+        self.is_arg = (ele[14] != EMPTY_FE)
+        self.argtype = BIO_INDEX_DICT[ele[14][0]]
         if self.is_arg:
             self.role = FEDICT.addstr(ele[14][2:])
         else:
@@ -58,7 +59,7 @@ class CoNLL09Element:
 
         dephead = "_"
         deprel = "_"
-        if self.dephead != NOTALABEL:
+        if self.dephead != EMPTY_LABEL:
             dephead = str(self.dephead)
             deprel = DEPRELDICT.getstr(self.deprel)
 
@@ -70,20 +71,20 @@ class CoNLL09Element:
 
         if rolelabel is None:
             if self.is_arg:
-                rolelabel = INV_ARGTYPES[self.argtype] + "-" + FEDICT.getstr(self.role)
+                rolelabel = INDEX_BIO_DICT[self.argtype] + "-" + FEDICT.getstr(self.role)
             else:
-                rolelabel = INV_ARGTYPES[self.argtype]
+                rolelabel = INDEX_BIO_DICT[self.argtype]
 
         if no_args:  # For Target ID / Frame ID predictions
             rolelabel = "O"
 
-        if DEBUGMODE:
+        if DEBUG_MODE:
             return idstr + form + lu + frame + rolelabel
         else:
             # ID    FORM    LEMMA   PLEMMA  POS PPOS    SENT#   PFEAT   HEAD    PHEAD   DEPREL  PDEPREL LU  FRAME ROLE
             # 0     1       2       3       4   5       6       7       8       9       10      11      12  13    14
             return "{}\t{}\t_\t{}\t{}\t{}\t{}\t_\t_\t{}\t_\t{}\t{}\t{}\t{}\n".format(
-                self.id, form, predicted_lemma, self.fn_pos, nltkpos, self.sent_num, dephead, deprel, lu, frame, rolelabel)
+                self.id, form, predicted_lemma, self.fn_pos, nltkpos, self.sent_num, dephead, deprel, lu, frame, rolelabel).encode('utf-8')
 
 
 class CoNLL09Example(FrameSemParse):
@@ -115,28 +116,14 @@ class CoNLL09Example(FrameSemParse):
             else:
                 notfes.append(e.id - 1)
 
-        if FEDICT.getid(NOTANFE) in self.invertedfes:
-            self.invertedfes[FEDICT.getid(NOTANFE)] = extract_spans(notfes)
-
-        # self.invertedfes = self._get_inverted_femap()
-        # for felabel in self.invertedfes:
-        #     if felabel == FEDICT.getid(NOTANFE): continue
-        #     argranges = self.invertedfes[felabel]
-        #     for arng in argranges:
-        #         if arng[0] == arng[1]:
-        #             self.add_fe(arng[0], SINGLE, felabel)
-        #         else:
-        #             self.add_fe(arng[0], BEG, felabel)
-        #             self.add_fe(arng[1], END, felabel)
+        if FEDICT.getid(EMPTY_FE) in self.invertedfes:
+            self.invertedfes[FEDICT.getid(EMPTY_FE)] = extract_spans(notfes)
 
         self.modifiable = False  # true cz generally gold.
 
     def _get_inverted_femap(self):
         tmp = {}
         for e in self._elements:
-            # if not e.is_arg:
-            #     continue
-            # elif e.role not in tmp:
             if e.role not in tmp:
                 tmp[e.role] = []
             tmp[e.role].append(e.id - 1)
@@ -155,18 +142,18 @@ class CoNLL09Example(FrameSemParse):
             for e in self._elements:
                 mystr += e.get_str()
         else:
-            rolelabels = [NOTANFE for _ in self._elements]
+            rolelabels = [EMPTY_FE for _ in self._elements]
             for feid in predictedfes:
                 felabel = FEDICT.getstr(feid)
-                if felabel == NOTANFE:
+                if felabel == EMPTY_FE:
                     continue
                 for argspan in predictedfes[feid]:
                     if argspan[0] == argspan[1]:
-                        rolelabels[argspan[0]] = INV_ARGTYPES[SINGULAR] + "-" + felabel
+                        rolelabels[argspan[0]] = INDEX_BIO_DICT[SINGULAR] + "-" + felabel
                     else:
-                        rolelabels[argspan[0]] = INV_ARGTYPES[BEGINNING] + "-" + felabel
+                        rolelabels[argspan[0]] = INDEX_BIO_DICT[BEGINNING] + "-" + felabel
                     for position in xrange(argspan[0] + 1, argspan[1] + 1):
-                        rolelabels[position] = INV_ARGTYPES[INSIDE] + "-" + felabel
+                        rolelabels[position] = INDEX_BIO_DICT[INSIDE] + "-" + felabel
 
             for e, role in zip(self._elements, rolelabels):
                 mystr += e.get_str(rolelabel=role)
@@ -187,9 +174,9 @@ class CoNLL09Example(FrameSemParse):
                 field.frame = predicted_frame[field.id - 1][1].id
             else:
                 field.is_pred = False
-                field.lu = LUDICT.getid(NOTALABEL)
-                field.lupos = LUPOSDICT.getid(NOTALABEL)
-                field.frame = FRAMEDICT.getid(NOTALABEL)
+                field.lu = LUDICT.getid(EMPTY_LABEL)
+                field.lupos = LUPOSDICT.getid(EMPTY_LABEL)
+                field.frame = FRAMEDICT.getid(EMPTY_LABEL)
             new_conll_str += field.get_str()
         return new_conll_str
 
@@ -206,56 +193,11 @@ class CoNLL09Example(FrameSemParse):
                 field.lupos = predicted_lu.posid
             else:
                 field.is_pred = False
-                field.lu = LUDICT.getid(NOTALABEL)
-                field.lupos = LUPOSDICT.getid(NOTALABEL)
-            field.frame = FRAMEDICT.getid(NOTALABEL)
+                field.lu = LUDICT.getid(EMPTY_LABEL)
+                field.lupos = LUPOSDICT.getid(EMPTY_LABEL)
+            field.frame = FRAMEDICT.getid(EMPTY_LABEL)
             new_conll_str += field.get_str(no_args=True)
         return new_conll_str
-
-    # def get_newstr_fe(self, targetfes): # after substituting predicted FEs
-    #     mystr = ""
-    #     insidespan = False
-    #     felabel = None
-    #     for e in xrange(len(self._elements)):
-    #         tmp = deepcopy(self._elements[e])
-    #         tmp.is_arg = None
-    #         tmp.argtype = None
-    #         tmp.role = None
-    #         if (tmp.id - 1) in targetfes:
-    #
-    #             fetype = targetfes[tmp.id - 1].keys()[0] # there is only one item in the map fes[fepos]
-    #             felabel = targetfes[tmp.id - 1].values()[0].id
-    #
-    #             tmp.is_arg = True
-    #             if fetype == SINGLE:  # TODO: CHANGE!!!
-    #                 tmp.argtype = SINGULAR
-    #             elif fetype == BEG:
-    #                 tmp.argtype = BEGINNING
-    #             else:
-    #                 tmp.argtype = INSIDE
-    #             tmp.role = felabel
-    #             if felabel is None: tmp.role = FEDICT.getid(UNK)
-    #
-    #             if fetype == BEG:
-    #                 tmp.argtype = BEGINNING
-    #                 insidespan = True
-    #             else:
-    #                 insidespan = False
-    #
-    #         elif insidespan:
-    #             tmp.is_arg = True
-    #             tmp.argtype = INSIDE
-    #             tmp.role = felabel
-    #             if felabel is None: # TODO: how is it inside a span and UNK?
-    #                 tmp.role = FEDICT.getid(UNK)
-    #
-    #         else:
-    #             tmp.is_arg = False
-    #             tmp.argtype = OUTSIDE
-    #             tmp.role = FEDICT.getid(NOTANFE)
-    #
-    #         mystr += tmp.get_str()
-    #     return mystr
 
     def print_internal(self, logger):
         self.print_internal_sent(logger)
@@ -287,7 +229,7 @@ class CoNLL09Example(FrameSemParse):
     def print_internal_args(self, logger):
         logger.write("frame:" + FRAMEDICT.getstr(self.frame.id).upper() + "\n")
         for fepos in self.invertedfes:
-            if fepos == FEDICT.getid(NOTANFE):
+            if fepos == FEDICT.getid(EMPTY_FE):
                 continue
             for span in self.invertedfes[fepos]:
                 logger.write(FEDICT.getstr(fepos) + "\t")
@@ -298,7 +240,7 @@ class CoNLL09Example(FrameSemParse):
 
     def print_external_parse(self, parse, logger):
         for fepos in parse:
-            if fepos == FEDICT.getid(NOTANFE):
+            if fepos == FEDICT.getid(EMPTY_FE):
                 continue
             for span in parse[fepos]:
                 logger.write(FEDICT.getstr(fepos) + "\t")

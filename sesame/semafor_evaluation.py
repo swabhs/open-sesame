@@ -6,7 +6,7 @@ from dataio import *
 def convert_conll_to_frame_elements(conllfile, fefile):
     examples, _, _ = read_conll(conllfile)
 
-    notanfe = c9.FEDICT.getid(NOTANFE)
+    notanfe = c9.FEDICT.getid(EMPTY_FE)
     with codecs.open(fefile, "w", "utf-8") as outf:
 
         for ex in examples:
@@ -32,7 +32,7 @@ def convert_conll_to_frame_elements(conllfile, fefile):
 
             for fe in ex.invertedfes:
                 festr = c9.FEDICT.getstr(fe)
-                if festr == NOTANFE:
+                if festr == EMPTY_FE:
                     continue
 
                 # SEMAFOR doesn't predict, but does evaluate against multiple spans, so the following is good

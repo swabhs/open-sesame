@@ -1,40 +1,33 @@
 # -*- coding: utf-8 -*-
-UNK = "UNK"
-NOTALABEL = "_"
-NOTANFE = "O"
+import json
+import sys
 
-# BIOS SCHEME
-BEGINNING = 0
-INSIDE = 1
-OUTSIDE = 2
-SINGULAR = 3
+config_json = open("configurations/global_config.json", "r")
+configuration = json.load(config_json)
+for key in sorted(configuration):
+    sys.stderr.write("{}:\t{}\n".format(key.upper(), configuration[key]))
 
-ARGTYPES={"B": BEGINNING,
-          "I": INSIDE,
-          NOTANFE: OUTSIDE,
-          "S": SINGULAR}
+VERSION = str(configuration["version"])
+DATA_DIR = configuration["data_directory"]
+EMBEDDINGS_FILE = configuration["embeddings_file"]
+DEBUG_MODE = configuration["debug_mode"]
 
-INV_ARGTYPES={v:k for k,v in ARGTYPES.iteritems()}
+# The following variables are held constant throughout the repository. Change at your own peril!
 
-DEBUGMODE = False
+PARSER_DATA_DIR = DATA_DIR + "neural/fn" + VERSION + "/"
+TRAIN_FTE = PARSER_DATA_DIR + "fn" + VERSION + ".fulltext.train.syntaxnet.conll"
+TRAIN_EXEMPLAR = PARSER_DATA_DIR + "fn" + VERSION + ".exemplar.train.syntaxnet.conll"
+DEV_CONLL = PARSER_DATA_DIR + "fn" + VERSION + ".dev.syntaxnet.conll"
+TEST_CONLL = PARSER_DATA_DIR + "fn" + VERSION + ".test.syntaxnet.conll"
 
-VERSION="1.5"
-DATADIR = "data/"
-PARSERDATADIR = DATADIR + "neural/fn" + VERSION + "/"
+FN_DATA_DIR = DATA_DIR + "fndata-" + VERSION + "/"
+LU_INDEX = FN_DATA_DIR + "luIndex.xml"
+LU_DIR = FN_DATA_DIR + "lu/"
+FULLTEXT_DIR = FN_DATA_DIR + "fulltext/"
+FRAME_DIR = FN_DATA_DIR + "frame/"
+FRAME_REL_FILE = FN_DATA_DIR + "frRelation.xml"
 
-TRAIN_FTE = PARSERDATADIR + "fn" + VERSION + ".fulltext.train.syntaxnet.conll"
-TRAIN_EXEMPLAR = PARSERDATADIR + "fn" + VERSION + ".exemplar.train.syntaxnet.conll"
-DEV_CONLL   = PARSERDATADIR + "fn" + VERSION + ".dev.syntaxnet.conll"
-TEST_CONLL  = PARSERDATADIR + "fn" + VERSION + ".test.syntaxnet.conll"
-
-FNDATADIR = DATADIR + "fndata-" + VERSION + "/"
-LU_INDEX = FNDATADIR + "luIndex.xml"
-LUDIR = FNDATADIR + "lu/"
-FTEDIR = FNDATADIR + "fulltext/"
-FRAME_DIR = FNDATADIR + "frame/"
-FRAME_REL_FILE = FNDATADIR + "frRelation.xml"
-
-TESTFILES = [
+TEST_FILES = [
         "ANC__110CYL067.xml",
         "ANC__110CYL069.xml",
         "ANC__112C-L013.xml",
@@ -60,43 +53,45 @@ TESTFILES = [
         "PropBank__AetnaLifeAndCasualty.xml",
         ]
 
-DEVFILES = [
+DEV_FILES = [
         "ANC__110CYL072.xml",
-#        "ANC__EntrepreneurAsMadonna.xml",
-#        "C-4__C-4Text.xml",
         "KBEval__MIT.xml",
-#        "LUCorpus-v0.3__20000420_xin_eng-NEW.xml",
-#        "LUCorpus-v0.3__20000424_nyt-NEW.xml",
         "LUCorpus-v0.3__20000415_apw_eng-NEW.xml",
         "LUCorpus-v0.3__ENRON-pearson-email-25jul02.xml",
-#        "LUCorpus-v0.3__AFGP-2002-600045-Trans.xml",
-#        "LUCorpus-v0.3__CNN_AARONBROWN_ENG_20051101_215800.partial-NEW.xml",
-#        "LUCorpus-v0.3__CNN_ENG_20030614_173123.4-NEW-1.xml",
-#        "LUCorpus-v0.3__artb_004_A1_E1_NEW.xml",
         "Miscellaneous__Hijack.xml",
-#        "NTI__LibyaCountry1.xml",
         "NTI__NorthKorea_NuclearOverview.xml",
-#        "NTI__SouthAfrica_Introduction.xml",
-#        "NTI__WMDNews_042106.xml",
         "NTI__WMDNews_062606.xml",
         "PropBank__TicketSplitting.xml",
         ]
 
-
-FILTERED_WVECS_FILE = DATADIR + "glove.6B.100d.framevocab.txt"
-
-PTBDATADIR = DATADIR + "ptb/"
+PTB_DATA_DIR = DATA_DIR + "ptb/"
 
 TRAIN_FTE_CONSTITS = "fn" + VERSION + ".fulltext.train.rnng.brackets"
 DEV_CONSTITS = "fn" + VERSION + ".dev.rnng.brackets"
 TEST_CONSTITS = "fn" + VERSION + ".test.rnng.brackets"
 
-CONSTIT_MAP = {TRAIN_FTE:TRAIN_FTE_CONSTITS, DEV_CONLL:DEV_CONSTITS, TEST_CONLL:TEST_CONSTITS}
+CONSTIT_MAP = {
+        TRAIN_FTE : TRAIN_FTE_CONSTITS,
+        DEV_CONLL : DEV_CONSTITS,
+        TEST_CONLL : TEST_CONSTITS
+        }
 
-# # arg span types
-# BEG = "b"
-# END = "e"
-# SINGLE = "s"
+# Label settings
+UNK = "UNK"
+EMPTY_LABEL = "_"
+EMPTY_FE = "O"
 
+# BIOS scheme settings
+BEGINNING = 0
+INSIDE = 1
+OUTSIDE = 2
+SINGULAR = 3
 
+BIO_INDEX_DICT = {
+        "B": BEGINNING,
+        "I": INSIDE,
+        EMPTY_FE: OUTSIDE,
+        "S": SINGULAR
+}
 
+INDEX_BIO_DICT = {index: tag for tag, index in BIO_INDEX_DICT.iteritems()}

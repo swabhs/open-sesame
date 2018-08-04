@@ -18,6 +18,7 @@ class ArgPosition(object):
             return ArgPosition.WITHIN
         return ArgPosition.OVERLAP
 
+
 class SpanWidth(object):
     one, two, threefive, fiveten, tenfifteen, fifteentwenty, evenmore = range(7)
 
@@ -41,6 +42,7 @@ class SpanWidth(object):
         elif 16 <= slen <= 20:
             return SpanWidth.fifteentwenty
         return SpanWidth.evenmore
+
 
 class OutHeads(object):
     zero, one, two, three, four, five, btwn610, btwn1115, morethan15 = range(9)

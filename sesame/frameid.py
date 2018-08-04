@@ -5,10 +5,10 @@ import sys
 import time
 from optparse import OptionParser
 
-from arksemaforeval import *
 from dynet import *
 from evaluation import *
 from raw_data import make_data_instance
+from semafor_evaluation import convert_conll_to_frame_elements
 
 
 optpr = OptionParser()
@@ -139,7 +139,7 @@ EVAL_EVERY_EPOCH = configuration['eval_after_every_epochs']
 DEV_EVAL_EPOCH = configuration['dev_eval_epoch_frequency'] * EVAL_EVERY_EPOCH
 
 sys.stderr.write("\nPARSER SETTINGS (see {})\n_____________________\n".format(configuration_file))
-for key in configuration:
+for key in sorted(configuration):
     sys.stderr.write("{}:\t{}\n".format(key.upper(), configuration[key]))
 
 sys.stderr.write("\n")
@@ -267,7 +267,7 @@ def print_as_conll(goldexamples, pred_targmaps):
 
 best_dev_f1 = 0.0
 if options.mode in ["refresh"]:
-    sys.stderr.write("Reusing model from {} ...\n".format(model_file_name))
+    sys.stderr.write("Reloading model from {} ...\n".format(model_file_name))
     model.populate(model_file_name)
     with open(os.path.join(model_dir, "best-dev-f1.txt"), "r") as fin:
         for line in fin:
@@ -338,6 +338,7 @@ if options.mode in ["train", "refresh"]:
             break
 
 elif options.mode == "test":
+    sys.stderr.write("Loading model from {} ...\n".format(model_file_name))
     model.populate(model_file_name)
     corpus_tpfpfn = [0.0, 0.0, 0.0]
 
@@ -406,8 +407,10 @@ elif options.mode == "test":
     sys.stderr.write("Printing frame-elements to " + fefile + " ...\n")
     convert_conll_to_frame_elements(out_conll_file, fefile)
     sys.stderr.write("Done!\n")
+    logger.close()
 
 elif options.mode == "predict":
+    sys.stderr.write("Loading model from {} ...\n".format(model_file_name))
     model.populate(model_file_name)
 
     predictions = []
@@ -417,5 +420,3 @@ elif options.mode == "predict":
     sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
     print_as_conll(instances, predictions)
     sys.stderr.write("Done!\n")
-
-logger.close()
