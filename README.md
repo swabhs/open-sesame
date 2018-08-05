@@ -14,7 +14,7 @@ $ python -m nltk.downloader averaged_perceptron_tagger wordnet
 
 ## Data Preprocessing
 
-This codebase only handles data in the XML format specified under FrameNet. The default version used in FrameNet 1.5, but the codebase is compatible with versions 1.6 and 1.7.
+This codebase only handles data in the XML format specified under FrameNet. The default version is FrameNet 1.7, but the codebase is backward compatible with versions 1.6 and 1.5.
 
 As a first step the data is preprocessed for ease of readability.
 
@@ -45,7 +45,13 @@ If training gets interrupted, it can be restarted from the last saved checkpoint
 
 ## Pre-trained Models
 
-[Download](http://www.cs.cmu.edu/~sswayamd/open-sesame-v1.1-models/pretrained.tar.gz) under base-directory, this will create a `logs/` directory containing pre-trained models for target (accuracy = 72.9 on test), frame (accuracy = 86.4 on test, with gold targets) and argument identification (f1 = 60.6 on test with gold targets and frames) for FrameNet 1.5.
+The downloads need to be placed under the base-directory. On extraction, these will create a `logs/` directory containing pre-trained models for target identification, frame identification using gold targets, and argument identification using gold targets and frames.
+
+|           |  FN 1.5 Dev | FN 1.5 Test | FN 1.5 Pretrained Models                                                                             |  FN 1.7 Dev | FN 1.7 Test | FN 1.7 Pretrained Models                                                                             |
+|-----------|------------:|------------:|------------------------------------------------------------------------------------------------------|------------:|------------:|------------------------------------------------------------------------------------------------------|
+| Target ID |       80.05 |       73.38 | [Download](http://www.cs.cmu.edu/~sswayamd/open-sesame-v1.1-models/fn1.5-pretrained-targetid.tar.gz) |       79.78 |       74.21 | [Download](http://www.cs.cmu.edu/~sswayamd/open-sesame-v1.1-models/fn1.7-pretrained-targetid.tar.gz) |
+| Frame ID  |       89.36 |       86.65 | [Download](http://www.cs.cmu.edu/~sswayamd/open-sesame-v1.1-models/fn1.5-pretrained-frameid.tar.gz)  |       89.66 |       86.49 | [Download](http://www.cs.cmu.edu/~sswayamd/open-sesame-v1.1-models/fn1.7-pretrained-frameid.tar.gz)  |
+| Arg ID    | coming soon | coming soon | coming soon                                                                                          | coming soon | coming soon | coming soon                                                                                          |
 
 ## Test
 To test under the above model, execute:
