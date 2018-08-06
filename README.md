@@ -49,7 +49,7 @@ The downloads need to be placed under the base-directory. On extraction, these w
 
 |           |  FN 1.5 Dev | FN 1.5 Test | FN 1.5 Pretrained Models                                                                             |  FN 1.7 Dev | FN 1.7 Test | FN 1.7 Pretrained Models                                                                             |
 |-----------|------------:|------------:|------------------------------------------------------------------------------------------------------|------------:|------------:|------------------------------------------------------------------------------------------------------|
-| Target ID |       80.05 |       73.38 | [Download](https://drive.google.com/file/d/1XjfGvGBxuKbqraO7ObZcOqgajUN4DW8e/view?usp=sharing) |       79.78 |       74.21 | [Download](http://www.cs.cmu.edu/~sswayamd/open-sesame-v1.1-models/fn1.7-pretrained-targetid.tar.gz) |
+| Target ID |       80.05 |       73.38 | [Download](https://drive.google.com/file/d/1XjfGvGBxuKbqraO7ObZcOqgajUN4DW8e/view?usp=sharing) |       79.78 |       74.21 | [Download](https://drive.google.com/file/d/1dfNy3hj251u-adldw03D74-EgFppkvYj/view?usp=sharing) |
 | Frame ID  |       89.36 |       86.65 | [Download](https://drive.google.com/file/d/1VtRTiHmIYgLfSxbYRQLdebnWemkuDpiz/view?usp=sharing)  |       89.66 |       86.49 | [Download](https://drive.google.com/file/d/1LNZdHqZ7v5hTnYhuFjr7HCdIkKg7R_zz/view?usp=sharing)  |
 | Arg ID    | coming soon | coming soon | coming soon                                                                                          | coming soon | coming soon | coming soon                                                                                          |
 
