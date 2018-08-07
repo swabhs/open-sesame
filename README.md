@@ -51,7 +51,7 @@ The downloads need to be placed under the base-directory. On extraction, these w
 |-----------|------------:|------------:|------------------------------------------------------------------------------------------------------|------------:|------------:|------------------------------------------------------------------------------------------------------|
 | Target ID |       80.05 |       73.38 | [Download](https://drive.google.com/file/d/1ytGCk_njS2aLXkeB9P4V5JONdI_9BIsm/view?usp=sharing) |       79.78 |       74.21 | [Download](https://drive.google.com/file/d/1pDagzQup--DPOrb21-dIPydwInTSHkMU/view?usp=sharing) |
 | Frame ID  |       89.36 |       86.65 | [Download](https://drive.google.com/file/d/1H9VGTQZeo5XQVLvDIjjDsHn4aO6qepAT/view?usp=sharing)  |       89.66 |       86.49 | [Download](https://drive.google.com/file/d/1K6Nc9d4yRai7a1YUSq3EI2-2rivm2uOi/view?usp=sharing)  |
-| Arg ID    | coming soon | coming soon | coming soon                                                                                          | coming soon | coming soon | coming soon                                                                                          |
+| Arg ID    |       60.6 |        59.24 | [Download](https://drive.google.com/file/d/1FfqihTBpXfdnRY8pgv20sR2KwL5v0y0F/view?usp=sharing)                                                                                          | 60.94 | 61.23 | [Download](https://drive.google.com/file/d/1aBQH6gKx-50xcKUgoqPGsRhVgc4THYgs/view?usp=sharing)                                                                                         |
 
 ## Test
 To test under the above model, execute:
