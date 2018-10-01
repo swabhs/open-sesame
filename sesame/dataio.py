@@ -56,7 +56,7 @@ def read_conll(conll_file, syn_type=None):
                 continue
             elements.append(CoNLL09Element(l, read_depsyn))
         cf.close()
-    sys.stderr.write("# examples in %s : %d in %d sents\n" %(conll_file, len(examples), next))
+    sys.stderr.write("# examples in %s : %d in %d sents\n" %(conll_file, len(examples), next_ex))
     sys.stderr.write("# examples with missing arguments : %d\n" %missingargs)
     if read_constits: analyze_constits_fes(examples)
     return examples, missingargs, totalexamples
@@ -68,7 +68,8 @@ def analyze_constits_fes(examples):
     matchph = {}
     for ex in examples:
         for fe in ex.invertedfes:
-            if fe == FEDICT.getid(EMPTY_LABEL): continue
+            if fe == FEDICT.getid(EMPTY_LABEL):
+                continue
             for span in ex.invertedfes[fe]:
                 if span in ex.sentence.constitspans:
                     matchspan += 1
