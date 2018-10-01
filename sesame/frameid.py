@@ -167,7 +167,11 @@ if USE_WV:
     e_x = model.add_lookup_parameters((VOCDICT.size(), PRETRAINED_DIM))
     for wordid in pretrained_embeddings_map:
         e_x.init_row(wordid, pretrained_embeddings_map[wordid])
-    w_e = model.add_parameters((LSTMINPDIM, PRETRAINED_DIM))
+
+    # Embedding for unknown pretrained embedding.
+    u_x = model.add_lookup_parameters((1, PRETRAINED_DIM), init='glorot')
+
+    w_e = model.add_parameters((LSTMINPDIM, PRETRAINED_DIM+INPDIM))
     b_e = model.add_parameters((LSTMINPDIM, 1))
 
 w_i = model.add_parameters((LSTMINPDIM, INPDIM))
@@ -193,24 +197,23 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
     emb_x = [v_x[tok] for tok in tokens]
     pos_x = [p_x[pos] for pos in postags]
 
-    pw_i = parameter(w_i)
-    pb_i = parameter(b_i)
-
-    emb2_xi = [(pw_i * concatenate([emb_x[i], pos_x[i]])  + pb_i) for i in xrange(sentlen+1)]
-    if USE_WV:
-        pw_e = parameter(w_e)
-        pb_e = parameter(b_e)
-        for i in xrange(sentlen+1):
-            if tokens[i] in pretrained_embeddings_map:
-                nonupdatedwv = e_x[tokens[i]]  # prevent the wvecs from being updated
-                emb2_xi[i] = emb2_xi[i] + pw_e * nonupdatedwv + pb_e
+    # emb2_xi = [(w_i * concatenate([emb_x[i], pos_x[i]])  + b_i) for i in xrange(sentlen+1)]
+    # if USE_WV:
+    #     for i in xrange(sentlen+1):
+    #         if tokens[i] in pretrained_embeddings_map:
+    #             nonupdatedwv = e_x[tokens[i]]  # prevent the wvecs from being updated
+    #             emb2_xi[i] = eb2_xi[i] + w_e * nonupdatedwv + b_e
+    emb2_xi = []
+    for i in xrange(sentlen + 1):
+        if tokens[i] in pretrained_embeddings_map:
+            # Prevent the pretrained embeddings from being updated.
+            emb_without_backprop = lookup(e_x, tokens[i], update=False)
+            features_at_i = concatenate([emb_x[i], pos_x[i], emb_without_backprop])
+        else:
+            features_at_i = concatenate([emb_x[i], pos_x[i], u_x])
+        emb2_xi.append(w_e * features_at_i + b_e)
 
     emb2_x = [rectify(emb2_xi[i]) for i in xrange(sentlen+1)]
-
-    pw_z = parameter(w_z)
-    pb_z = parameter(b_z)
-    pw_f = parameter(w_f)
-    pb_f = parameter(b_f)
 
     # initializing the two LSTMs
     if USE_DROPOUT and trainmode:
@@ -236,7 +239,7 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
             lu_vec = lu_x[lexunit.id]
         fbemb_i = concatenate([target_vec, lu_vec, lp_x[lexunit.posid]])
         # TODO(swabha): Add more Baidu-style features here.
-        f_i = pw_f * rectify(pw_z * fbemb_i + pb_z) + pb_f
+        f_i = w_f * rectify(w_z * fbemb_i + b_z) + b_f
         if trainmode and USE_DROPOUT:
             f_i = dropout(f_i, DROPOUT_RATE)
 
@@ -245,7 +248,8 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
         if not trainmode:
             chosenframe = np.argmax(logloss.npvalue())
 
-    if trainmode: chosenframe = goldframe.id
+    if trainmode:
+        chosenframe = goldframe.id
 
     losses = []
     if logloss is not None:
@@ -262,7 +266,6 @@ def print_as_conll(goldexamples, pred_targmaps):
             result = g.get_predicted_frame_conll(p) + "\n"
             f.write(result)
         f.close()
-
 
 
 best_dev_f1 = 0.0

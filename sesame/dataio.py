@@ -58,7 +58,8 @@ def read_conll(conll_file, syn_type=None):
         cf.close()
     sys.stderr.write("# examples in %s : %d in %d sents\n" %(conll_file, len(examples), next_ex))
     sys.stderr.write("# examples with missing arguments : %d\n" %missingargs)
-    if read_constits: analyze_constits_fes(examples)
+    if read_constits:
+        analyze_constits_fes(examples)
     return examples, missingargs, totalexamples
 
 
