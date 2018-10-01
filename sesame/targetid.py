@@ -229,7 +229,10 @@ l_x = model.add_lookup_parameters((LEMDICT.size(), LEMMA_DIM))
 e_x = model.add_lookup_parameters((VOCDICT.size(), PRETRAINED_DIM))
 for wordid in pretrained_map:
     e_x.init_row(wordid, pretrained_map[wordid])
-w_e = model.add_parameters((LSTM_INP_DIM, PRETRAINED_DIM))
+# Embedding for unknown pretrained embedding.
+u_x = model.add_lookup_parameters((1, PRETRAINED_DIM), init='glorot')
+
+w_e = model.add_parameters((LSTM_INP_DIM, PRETRAINED_DIM + INPUT_DIM))
 b_e = model.add_parameters((LSTM_INP_DIM, 1))
 
 w_i = model.add_parameters((LSTM_INP_DIM, INPUT_DIM))
@@ -259,23 +262,17 @@ def identify_targets(builders, tokens, postags, lemmas, gold_targets=None):
     pos_x = [p_x[pos] for pos in postags]
     lem_x = [l_x[lem] for lem in lemmas]
 
-    pw_i = parameter(w_i)
-    pb_i = parameter(b_i)
-
-    emb2_xi = [(pw_i * concatenate([emb_x[i], pos_x[i], lem_x[i]])  + pb_i) for i in xrange(sentlen)]
-    pw_e = parameter(w_e)
-    pb_e = parameter(b_e)
+    emb2_xi = []
     for i in xrange(sentlen):
         if tokens[i] in pretrained_map:
-            nonupdatedwv = e_x[tokens[i]]  # Prevent the pretrained embeddings from being updated.
-            emb2_xi[i] = emb2_xi[i] + pw_e * nonupdatedwv + pb_e
+            # Prevent the pretrained embeddings from being updated.
+            emb_without_backprop = lookup(e_x, tokens[i], update=False)
+            features_at_i = concatenate([emb_x[i], pos_x[i], lem_x[i], emb_without_backprop])
+        else:
+            features_at_i = concatenate([emb_x[i], pos_x[i], lem_x[i], u_x])
+        emb2_xi.append(w_e * features_at_i + b_e)
 
     emb2_x = [rectify(emb2_xi[i]) for i in xrange(sentlen)]
-
-    pw_z = parameter(w_z)
-    pb_z = parameter(b_z)
-    pw_f = parameter(w_f)
-    pb_f = parameter(b_f)
 
     # Initializing the two LSTMs.
     if USE_DROPOUT and train_mode:
@@ -292,7 +289,7 @@ def identify_targets(builders, tokens, postags, lemmas, gold_targets=None):
         if not check_if_potential_target(lemmas[i]):
             continue
         h_i = concatenate([fw_x[i], bw_x[sentlen - i - 1]])
-        score_i = pw_f * rectify(pw_z * h_i + pb_z) + pb_f
+        score_i = w_f * rectify(w_z * h_i + b_z) + b_f
         if train_mode and USE_DROPOUT:
             score_i = dropout(score_i, DROPOUT_RATE)
 

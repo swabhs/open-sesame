@@ -1,4 +1,5 @@
 # Project specific
+*gz
 ensemble*
 dataanalysis.py
 *.conll

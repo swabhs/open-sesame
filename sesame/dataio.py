@@ -11,6 +11,7 @@ from conll09 import *
 from globalconfig import *
 from sentence import *
 
+
 def read_conll(conll_file, syn_type=None):
     sys.stderr.write("\nReading {} ...\n".format(conll_file))
 
@@ -27,8 +28,7 @@ def read_conll(conll_file, syn_type=None):
     missingargs = 0.0
     totalexamples = 0.0
 
-    # outf = open(conllfile+".sentswithargs", "wb")
-    next = 0
+    next_ex = 0
     with codecs.open(conll_file, "r", "utf-8") as cf:
         snum = -1
         for l in cf:
@@ -38,7 +38,7 @@ def read_conll(conll_file, syn_type=None):
                     sentence = Sentence(syn_type, elements=elements)
                     if read_constits:
                         sentence.get_all_parts_of_ctree(cparses[next], CLABELDICT, True)
-                    next += 1
+                    next_ex += 1
                     snum = elements[0].sent_num
                 e = CoNLL09Example(sentence, elements)
                 examples.append(e)
@@ -50,14 +50,12 @@ def read_conll(conll_file, syn_type=None):
                 if e.numargs == 0:
                     missingargs += 1
 
-                # outf.write(str(snum)+'\n')
                 totalexamples += 1
 
                 elements = []
                 continue
             elements.append(CoNLL09Element(l, read_depsyn))
         cf.close()
-        # outf.close()
     sys.stderr.write("# examples in %s : %d in %d sents\n" %(conll_file, len(examples), next))
     sys.stderr.write("# examples with missing arguments : %d\n" %missingargs)
     if read_constits: analyze_constits_fes(examples)
@@ -86,9 +84,6 @@ def analyze_constits_fes(examples):
                      "non-matches = %d %.2f%%\n"
                      "total = %d\n"
                      % (matchspan, matchspan*100/tot, notmatch, notmatch*100/tot, tot))
-    # sorted_mp = sorted(matchph.items(), key=operator.itemgetter(1), reverse=True)
-    # for phrase,v in sorted_mp:
-    #     sys.stderr.write(CLABELDICT.getstr(phrase) + ":\t" + str(v) + "\n")
     sys.stderr.write("phrases which are constits = %d\n" %(len(matchph)))
 
 
@@ -96,7 +91,6 @@ def create_target_frame_map(luIndex_file,  tf_map):
     sys.stderr.write("\nReading the frame - lexunit map from " + LU_INDEX + " ...\n")
 
     f = open(luIndex_file, "rb")
-    #    with codecs.open(luIndex_file, "r", "utf-8") as xml_file: # TODO: why won't this right way of reading work?
     tree = et.parse(f)
     root = tree.getroot()
 
@@ -127,7 +121,6 @@ def create_target_lu_map():
     sys.stderr.write("\nReading the lexical unit index file: {}\n".format(LU_INDEX))
 
     lu_index_file = open(LU_INDEX, "rb")
-    #    with codecs.open(luIndex_file, "r", "utf-8") as xml_file: # TODO: why won't this right way of reading work?
     tree = et.parse(lu_index_file)
     root = tree.getroot()
 
@@ -162,7 +155,6 @@ def create_target_lu_map():
 
 def read_fes_lus(frame_file):
     f = open(frame_file, "rb")
-    #    with codecs.open(luIndex_file, "r", "utf-8") as xml_file: # TODO: why won't this right way of reading work?
     tree = et.parse(f)
     root = tree.getroot()
 
@@ -223,52 +215,65 @@ def read_frame_maps():
 
 
 def read_related_lus():
-    sys.stderr.write("\nReading the frame-element - frame map from " + FRAME_DIR + " ...\n")
+    sys.stderr.write("\nReading the frame-LU map from " + FRAME_DIR + " ...\n")
 
-    lufrmmap = {}
-    maxframes = 0
+    lu_to_frame_dict = {}
+    tot_frames = 0.
+    max_frames = 0
+    tot_lus = 0.
     longestlu = None
 
-    frmlumap = {}
-    maxlus = 0
+    frame_to_lu_dict = {}
+    max_lus = 0
     longestfrm = None
 
     for f in os.listdir(FRAME_DIR):
         framef = os.path.join(FRAME_DIR, f)
         if framef.endswith("xsl"):
             continue
+        tot_frames += 1
         frm, fes, corefes, lus = read_fes_lus(framef)
 
         for l in lus:
-            if l not in lufrmmap:
-                lufrmmap[l] = set([])
-            lufrmmap[l].add(frm)
-            if len(lufrmmap[l]) > maxframes:
-                maxframes = len(lufrmmap[l])
+            tot_lus += 1
+            if l not in lu_to_frame_dict:
+                lu_to_frame_dict[l] = set([])
+            lu_to_frame_dict[l].add(frm)
+            if len(lu_to_frame_dict[l]) > max_frames:
+                max_frames = len(lu_to_frame_dict[l])
                 longestlu = l
 
 
-            if frm not in frmlumap:
-                frmlumap[frm] = set([])
-            frmlumap[frm].add(l)
-            if len(frmlumap[frm]) > maxlus:
-                maxlus = len(frmlumap[frm])
+            if frm not in frame_to_lu_dict:
+                frame_to_lu_dict[frm] = set([])
+            frame_to_lu_dict[frm].add(l)
+            if len(frame_to_lu_dict[frm]) > max_lus:
+                max_lus = len(frame_to_lu_dict[frm])
                 longestfrm = frm
 
     related_lus = {}
-    for l in lufrmmap:
-        for frm in lufrmmap[l]:
-            if frm in frmlumap:
+    for l in lu_to_frame_dict:
+        for frm in lu_to_frame_dict[l]:
+            if frm in frame_to_lu_dict:
                 if l not in related_lus:
                     related_lus[l] = set([])
-                related_lus[l].update(frmlumap[frm])
+                related_lus[l].update(frame_to_lu_dict[frm])
 
-    sys.stderr.write("# max frames for LU: %d in LU (%s)\n"
-                     "# max LUs for frame: %d in Frame (%s)\n"
-                     % (maxframes, LUDICT.getstr(longestlu),
-                        maxlus, FRAMEDICT.getstr(longestfrm)))
+    tot_frames_per_lu = sum([len(lu_to_frame_dict[l]) for l in lu_to_frame_dict])
+    avg_frames_per_lu = tot_frames_per_lu * 1.0 / len(lu_to_frame_dict)
 
-    return lufrmmap, related_lus
+    sys.stderr.write("# Max frames for LU: %d in LU (%s)\n"
+                     "# Avg LUs for frame: %f\n"
+                     "# Avg frames per LU: %f\n"
+                     "# Max LUs for frame: %d in Frame (%s)\n"
+                     % (max_frames,
+                        LUDICT.getstr(longestlu),
+                        tot_lus/tot_frames,
+                        avg_frames_per_lu,
+                        max_lus,
+                        FRAMEDICT.getstr(longestfrm)))
+
+    return lu_to_frame_dict, related_lus
 
 
 def get_wvec_map():
@@ -298,8 +303,6 @@ def read_frame_relations():
     sys.stderr.write("\nReading inheritance relationships from {} ...\n".format(FRAME_REL_FILE))
 
     f = open(FRAME_REL_FILE, "rb")
-    #  with codecs.open(luIndex_file, "r", "utf-8") as xml_file:
-    #  TODO: why won't this right way of reading work?
     tree = et.parse(f)
     root = tree.getroot()
 

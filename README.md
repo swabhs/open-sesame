@@ -20,28 +20,36 @@ This codebase only handles data in the XML format specified under FrameNet. The 
 
 As a first step the data is preprocessed for ease of readability.
 
-1. First, create a `data/` directory here, download FrameNet version 1.$x and place it under `data/fndata-1.$x/`.
+0. Clone the repository.
+```sh
+$ git clone https://github.com/swabhs/open-sesame.git
+$ cd open-sesame/
+ ```
 
-2. Second, this project uses pretrained [GloVe word embeddings](https://nlp.stanford.edu/projects/glove/) of 100 dimensions. Download and extract them under `data/`.
+1. Create a `data/` directory under the root directory, download [FrameNet version 1.7](https://drive.google.com/open?id=1s4SDt_yDhT8qFs1MZJbeFf-XeiNPNnx7), and extract  under `data/fndata-1.7/`.
+
+2. Second, this project uses pretrained [GloVe word embeddings](https://nlp.stanford.edu/projects/glove/) of 100 dimensions, trained on 6B tokens. [Download](http://nlp.stanford.edu/data/glove.6B.zip) and extract under `data/`.
 
 3. Optionally, make alterations to the configurations in `configurations/global_config.json`, if you have decided to either use a different version of FrameNet, or different pretrained embeddings, etc.
 
-4. Preprocess the data by first converting into a [format similar to CoNLL 2009](https://ufal.mff.cuni.cz/conll2009-st/task-description.html), but with BIO tags, by executing:
+4. In this repository, data is formatted in a [format similar to CoNLL 2009](https://ufal.mff.cuni.cz/conll2009-st/task-description.html), but without BIO tags, for ease of reading, compared to the original XML format. Preprocess the data by executing:
 ```sh
 $ python -m sesame.preprocess
 ```
-The above script writes the train, dev and test files in the required format into the `data/neural/fn1.$x/` directory. There is plenty of noise in the annotations --- annotations which could not be used, along with their respective error messages, get logged as `preprocess-fn1.$x.log`.
+The above script writes the train, dev and test files in the required format into the `data/neural/fn1.7/` directory. A large fraction of the annotations are either incomplete, or inconsistent. Such annotations are discarded, but logged under `preprocess-fn1.7.log`, along with the respective error messages.
 
 
 ## Training
 
-Here, we briefly describe the training for each model. The different models are target identification, frame identification and argument identification, which *need to be executed in that order*. To train a model, execute:
+Frame-semantic parsing involves target identification, frame identification and argument identification --- each step is trained independently of the others. Details can be found in our [paper](https://arxiv.org/abs/1706.09528), and also below.
+
+To train a model, execute:
 
 ```sh
 $ python -m sesame.$MODEL --mode train --model_name sample-$MODEL
 ```
 
-The $MODELs are specified below. Training saves the best model on validation data in the directory `logs/sample-$MODEL/best-$MODEL-1.$x-model`. The same directory will also save a `configurations.json` containing current model configuration.
+The $MODELs are specified below. Training saves the best model on validation data in the directory `logs/sample-$MODEL/best-$MODEL-1.7-model`. The same directory will also save a `configurations.json` containing current model configuration.
 
 If training gets interrupted, it can be restarted from the last saved checkpoint by specifying `--mode refresh`.
 
@@ -51,18 +59,20 @@ The downloads need to be placed under the base-directory. On extraction, these w
 
 |           |  FN 1.5 Dev | FN 1.5 Test | FN 1.5 Pretrained Models                                                                             |  FN 1.7 Dev | FN 1.7 Test | FN 1.7 Pretrained Models                                                                             |
 |-----------|------------:|------------:|------------------------------------------------------------------------------------------------------|------------:|------------:|------------------------------------------------------------------------------------------------------|
-| Target ID |       80.05 |       73.38 | [Download](https://drive.google.com/file/d/1ytGCk_njS2aLXkeB9P4V5JONdI_9BIsm/view?usp=sharing) |       79.78 |       74.21 | [Download](https://drive.google.com/file/d/1pDagzQup--DPOrb21-dIPydwInTSHkMU/view?usp=sharing) |
+| Target ID |       80.05 |       73.38 | [Download](https://drive.google.com/file/d/1ytGCk_njS2aLXkeB9P4V5JONdI_9BIsm/view?usp=sharing) |       80.26 |       73.25 | [Download](https://drive.google.com/file/d/1JLE-MzpDwok9QJA4Skfo6PfzBentUQ7q/view?usp=sharing) |
 | Frame ID  |       89.36 |       86.65 | [Download](https://drive.google.com/file/d/1H9VGTQZeo5XQVLvDIjjDsHn4aO6qepAT/view?usp=sharing)  |       89.66 |       86.49 | [Download](https://drive.google.com/file/d/1K6Nc9d4yRai7a1YUSq3EI2-2rivm2uOi/view?usp=sharing)  |
 | Arg ID    |       60.6 |        59.24 | [Download](https://drive.google.com/file/d/1FfqihTBpXfdnRY8pgv20sR2KwL5v0y0F/view?usp=sharing)                                                                                          | 60.94 | 61.23 | [Download](https://drive.google.com/file/d/1aBQH6gKx-50xcKUgoqPGsRhVgc4THYgs/view?usp=sharing)                                                                                         |
 
 ## Test
-To test under the above model, execute:
+
+The different models for target identification, frame identification and argument identification, *need to be executed in that order*.
+To test under a given model, execute:
 
 ```sh
 $ python -m sesame.$MODEL --mode test --model_name sample-$MODEL
 ```
 
-The output, in a CoNLL 2009-like format will be written to `logs/sample-$MODEL/predicted-1.$x-$MODEL-test.conll` and in the [frame-elements file format](https://github.com/Noahs-ARK/semafor/tree/master/training/data) to `logs/sample-$MODEL/predicted-1.$x-$MODEL-test.fes` for frame and argument identification.
+The output, in a CoNLL 2009-like format will be written to `logs/sample-$MODEL/predicted-1.7-$MODEL-test.conll` and in the [frame-elements file format](https://github.com/Noahs-ARK/semafor/tree/master/training/data) to `logs/sample-$MODEL/predicted-1.7-$MODEL-test.fes` for frame and argument identification.
 
 ### 1. Target Identification
 
@@ -112,3 +122,4 @@ For questions and usage issues, please contact `swabha@cs.cmu.edu`. If you use o
   year={2017}
 }
 ```
+
