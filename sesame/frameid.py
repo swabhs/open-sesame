@@ -197,12 +197,6 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
     emb_x = [v_x[tok] for tok in tokens]
     pos_x = [p_x[pos] for pos in postags]
 
-    # emb2_xi = [(w_i * concatenate([emb_x[i], pos_x[i]])  + b_i) for i in xrange(sentlen+1)]
-    # if USE_WV:
-    #     for i in xrange(sentlen+1):
-    #         if tokens[i] in pretrained_embeddings_map:
-    #             nonupdatedwv = e_x[tokens[i]]  # prevent the wvecs from being updated
-    #             emb2_xi[i] = eb2_xi[i] + w_e * nonupdatedwv + b_e
     emb2_xi = []
     for i in xrange(sentlen + 1):
         if tokens[i] in pretrained_embeddings_map:
