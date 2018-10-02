@@ -6,5 +6,5 @@ setuptools.setup(
         author='Swabha Swayamdipta',
         author_email='swabha@cs.cmu.edu',
         description='Frame-Semantic Parsing with Segmental RNNs and a Syntactic Scaffold',
-        url='https://github.com/Noahs-ARK/open-sesame/',
+        url='https://github.com/swabhs/open-sesame/',
         )
