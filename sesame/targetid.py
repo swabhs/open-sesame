@@ -333,7 +333,7 @@ if options.mode in ["refresh"]:
 
 
 if options.mode in ["train", "refresh"]:
-    tagged = loss = 0.0
+    loss = 0.0
     train_result = [0.0, 0.0, 0.0]
 
     last_updated_epoch = 0
@@ -344,8 +344,7 @@ if options.mode in ["train", "refresh"]:
             if idx % EVAL_EVERY_EPOCH == 0:
                 trainer.status()
                 _, _, trainf = calc_f(train_result)
-                sys.stderr.write("%d loss = %.6f train f1 = %.4f\n" %(idx, loss/tagged, trainf))
-                tagged = loss = 0.0
+                sys.stderr.write("epoch = %d.%d loss = %.6f train f1 = %.4f\n" %(epoch, idx, loss/idx, trainf))
                 train_result = [0.0, 0.0, 0.0]
             inptoks = []
             unk_replace_tokens(trex.tokens, inptoks, VOCDICT, UNK_PROB, UNKTOKEN)
@@ -359,7 +358,6 @@ if options.mode in ["train", "refresh"]:
                 loss += trex_loss.scalar_value()
                 trex_loss.backward()
                 trainer.update()
-            tagged += 1
 
             if idx % DEV_EVAL_EPOCH == 0:
                 corpus_result = [0.0, 0.0, 0.0]
@@ -399,6 +397,7 @@ if options.mode in ["train", "refresh"]:
         if epoch - last_updated_epoch > PATIENCE:
             sys.stderr.write("Ran out of patience, ending training.\n")
             break
+        loss = 0.0
 
 elif options.mode == "test":
     sys.stderr.write("Reading model from {} ...\n".format(model_file_name))

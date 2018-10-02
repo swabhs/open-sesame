@@ -200,8 +200,8 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
     emb2_xi = []
     for i in xrange(sentlen + 1):
         if tokens[i] in pretrained_embeddings_map:
-            # Prevent the pretrained embeddings from being updated.
-            emb_without_backprop = lookup(e_x, tokens[i], update=False)
+            # If update set to False, prevents pretrained embeddings from being updated.
+            emb_without_backprop = lookup(e_x, tokens[i], update=True)
             features_at_i = concatenate([emb_x[i], pos_x[i], emb_without_backprop])
         else:
             features_at_i = concatenate([emb_x[i], pos_x[i], u_x])
@@ -273,7 +273,7 @@ if options.mode in ["refresh"]:
     sys.stderr.write("Best dev F1 so far = %.4f\n" % best_dev_f1)
 
 if options.mode in ["train", "refresh"]:
-    tagged = loss = 0.0
+    loss = 0.0
     last_updated_epoch = 0
 
     for epoch in xrange(NUM_EPOCHS):
@@ -281,8 +281,8 @@ if options.mode in ["train", "refresh"]:
         for idx, trex in enumerate(trainexamples, 1):
             if idx % EVAL_EVERY_EPOCH == 0:
                 trainer.status()
-                sys.stderr.write("%d loss = %.6f\n" %(idx, loss/tagged))
-                tagged = loss = 0.0
+                sys.stderr.write("epoch = %d.%d loss = %.6f\n" %(epoch, idx, loss/idx))
+
             inptoks = []
             unk_replace_tokens(trex.tokens, inptoks, VOCDICT, UNK_PROB, UNKTOKEN)
 
@@ -293,7 +293,6 @@ if options.mode in ["train", "refresh"]:
                 loss += trexloss.scalar_value()
                 trexloss.backward()
                 trainer.update()
-            tagged += 1
 
             if idx % DEV_EVAL_EPOCH == 0:
                 corpus_result = [0.0, 0.0, 0.0]
@@ -313,12 +312,8 @@ if options.mode in ["train", "refresh"]:
 
                 devp, devr, devf = calc_f(corpus_result)
                 devtp, devfp, devfn = corpus_result
-                sys.stderr.write("[dev epoch=%d] loss = %.6f "
-                                 "p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f"
-                                 % (epoch, devloss/devtagged,
-                                    devp, devtp, devtp + devfp,
-                                    devr, devtp, devtp + devfn,
-                                    devf))
+                sys.stderr.write("[dev epoch=%d.%d] loss = %.6f f1 = %.4f (%.1f/%.1f)"
+                                 % (epoch, idx, devloss/devtagged, devf, devtp, devtp + devfp))
                 if devf > best_dev_f1:
                     best_dev_f1 = devf
                     with open(os.path.join(model_dir, "best-dev-f1.txt"), "w") as fout:
@@ -333,6 +328,7 @@ if options.mode in ["train", "refresh"]:
         if epoch - last_updated_epoch > PATIENCE:
             sys.stderr.write("Ran out of patience, ending training.\n")
             break
+        loss = 0.0
 
 elif options.mode == "test":
     sys.stderr.write("Loading model from {} ...\n".format(model_file_name))

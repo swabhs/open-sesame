@@ -57,10 +57,10 @@ If training gets interrupted, it can be restarted from the last saved checkpoint
 
 The downloads need to be placed under the base-directory. On extraction, these will create a `logs/` directory containing pre-trained models for target identification, frame identification using gold targets, and argument identification using gold targets and frames.
 
-|           |  FN 1.5 Dev | FN 1.5 Test | FN 1.5 Pretrained Models                                                                             |  FN 1.7 Dev | FN 1.7 Test | FN 1.7 Pretrained Models                                                                             |
+|           |  FN 1.5 Dev | FN 1.5 Test | FN 1.5 Models                                                                             |  FN 1.7 Dev | FN 1.7 Test | FN 1.7 Models                                                                             |
 |-----------|------------:|------------:|------------------------------------------------------------------------------------------------------|------------:|------------:|------------------------------------------------------------------------------------------------------|
 | Target ID |       79.85 |       73.23 | [Download](https://drive.google.com/file/d/1dcQp7b1jOQNWguBuVI11IBfk6xvS79uQ/view?usp=sharing) |       80.26 |       73.25 | [Download](https://drive.google.com/file/d/1JLE-MzpDwok9QJA4Skfo6PfzBentUQ7q/view?usp=sharing) |
-| Frame ID  |       89.36 |       86.65 | [Download](https://drive.google.com/file/d/1H9VGTQZeo5XQVLvDIjjDsHn4aO6qepAT/view?usp=sharing)  |       89.66 |       86.49 | [Download](https://drive.google.com/file/d/1K6Nc9d4yRai7a1YUSq3EI2-2rivm2uOi/view?usp=sharing)  |
+| Frame ID  |       89.27 |       86.40 | [Download](https://drive.google.com/file/d/1e1lODqVttnt58T1OLlxQwKduI9PgyHUD/view?usp=sharing)  |       89.74 |       86.55 | [Download](https://drive.google.com/file/d/1K6Nc9d4yRai7a1YUSq3EI2-2rivm2uOi/view?usp=sharing)  |
 | Arg ID    |       60.6 |        59.24 | [Download](https://drive.google.com/file/d/1FfqihTBpXfdnRY8pgv20sR2KwL5v0y0F/view?usp=sharing)                                                                                          | 60.94 | 61.23 | [Download](https://drive.google.com/file/d/1aBQH6gKx-50xcKUgoqPGsRhVgc4THYgs/view?usp=sharing)                                                                                         |
 
 ## Test

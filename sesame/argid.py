@@ -918,7 +918,7 @@ if options.mode in ["refresh"]:
     sys.stderr.write("Best dev F1 so far = %.4f\n" % best_dev_f1)
 
 if options.mode in ["train", "refresh"]:
-    tagged = loss = 0.0
+    loss = 0.0
     last_updated_epoch = 0
 
     if USE_PTB_CONSTITS:
@@ -929,12 +929,11 @@ if options.mode in ["train", "refresh"]:
         random.shuffle(trainexamples)
 
         for idx, trex in enumerate(trainexamples, 1):
-            if (idx - 1) % LOSS_EVAL_EPOCH == 0 and tagged > 0:
+            if (idx - 1) % LOSS_EVAL_EPOCH == 0:
                 adam.status()
-                sys.stderr.write("%d loss = %f [took %.3f s]\n" % (idx - 1, (loss / tagged), time.time() - starttime))
+                sys.stderr.write("epoch = %d.%d loss = %.6f [took %.3f s]\n" % (
+                    epoch, idx-1, (loss/idx), time.time() - starttime))
                 starttime = time.time()
-                tagged = 0.0
-                loss = 0.0
 
             unkedtoks = []
             unk_replace_tokens(trex.tokens, unkedtoks, VOCDICT, UNK_PROB, UNKTOKEN)
@@ -948,7 +947,7 @@ if options.mode in ["train", "refresh"]:
                                                     trex.sentence,
                                                     trex.targetframedict,
                                                     goldfes=trex.invertedfes)
-            tagged += taggedinex
+            # tagged += taggedinex
 
             if trexloss is not None:
                 loss += trexloss.scalar_value()
@@ -979,9 +978,9 @@ if options.mode in ["train", "refresh"]:
                 up, ur, uf = calc_f(ures)
                 lp, lr, lf = calc_f(labldres)
                 wp, wr, wf = calc_f(tokenwise)
-                sys.stderr.write("[dev epoch=%d after=%d] wprec = %.5f wrec = %.5f wf1 = %.5f\n"
-                                 "[dev epoch=%d after=%d] uprec = %.5f urec = %.5f uf1 = %.5f\n"
-                                 "[dev epoch=%d after=%d] lprec = %.5f lrec = %.5f lf1 = %.5f"
+                sys.stderr.write("[dev epoch=%d.%d] wprec = %.5f wrec = %.5f wf1 = %.5f\n"
+                                 "[dev epoch=%d.%d] uprec = %.5f urec = %.5f uf1 = %.5f\n"
+                                 "[dev epoch=%d.%d] lprec = %.5f lrec = %.5f lf1 = %.5f"
                                  % (epoch, idx, wp, wr, wf, epoch, idx, up, ur, uf, epoch, idx, lp, lr, lf))
 
                 if lf > best_dev_f1:
@@ -999,6 +998,7 @@ if options.mode in ["train", "refresh"]:
         if epoch - last_updated_epoch > PATIENCE:
             sys.stderr.write("Ran out of patience, ending training.\n")
             break
+        loss = 0.0
 
 elif options.mode == "ensemble":
     exfs = {x: {} for x in xrange(len(devexamples))}
@@ -1065,8 +1065,8 @@ elif options.mode == "predict":
     predictions = []
     for instance in instances:
         prediction = identify_fes(instance.tokens,
-                                     instance.sentence,
-                                     instance.targetframedict)
+                                  instance.sentence,
+                                  instance.targetframedict)
         predictions.append(prediction)
     sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
     print_as_conll(instances, predictions)

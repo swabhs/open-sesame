@@ -64,12 +64,14 @@ def unlabeled_eval(goldfes, predargmax, notanfeid):
     utp = ufp = ufn = 0.0
     goldspans = []
     for feid in goldfes:
-        if feid == notanfeid: continue
+        if feid == notanfeid:
+            continue
         goldspans.append(sorted(goldfes[feid]))
 
     predspans = []
     for fe in predargmax:
-        if fe == notanfeid: continue
+        if fe == notanfeid:
+            continue
         predspans.append(sorted(predargmax[fe]))
 
     # unlabeled spans
@@ -95,17 +97,20 @@ def labeled_eval(corefes, goldfes, predargmax, notanfeid):
     ltp = lfp = lfn = 0.0
     # labeled spans
     for goldfe in goldfes:
-        if goldfe == notanfeid: continue
+        if goldfe == notanfeid:
+            continue
         if goldfe in predargmax and set(predargmax[goldfe]) == set(goldfes[goldfe]):
             ltp += score(goldfe)
         else:
             lfn += score(goldfe)
 
-    # the condition below handles frames which are not annotated. ideally these should be ignored in the data.
+    # The condition below handles frames which are not annotated.
+    # Ideally these should be ignored in the data.
     # if len(goldfes) == 1 and notanfeid in goldfes: return ltp, lfp, lfn
 
     for predfe in predargmax:
-        if predfe == notanfeid: continue
+        if predfe == notanfeid:
+            continue
         if predfe not in goldfes or set(goldfes[predfe]) != set(predargmax[predfe]):
             lfp += score(predfe)
 
@@ -115,7 +120,7 @@ def token_level_eval(sentlen, goldfes, predargmax, notanfeid):
     goldtoks = [0 for _ in xrange(sentlen)]
     for feid in goldfes:
         for span in goldfes[feid]:
-            for s in xrange(span[0],span[1]+1):
+            for s in xrange(span[0], span[1]+1):
                 goldtoks[s] = feid
 
     predtoks = [0 for _ in xrange(sentlen)]
@@ -145,13 +150,13 @@ def evaluate_example_argid(goldfes, predargmax, corefes, sentlen, notanfeid=None
     ltp, lfp, lfn = labeled_eval(corefes, goldfes, predargmax, notanfeid)
     wtp, wfp, wfn = token_level_eval(sentlen, goldfes, predargmax, notanfeid)
 
-    return [utp,ufp,ufn], [ltp,lfp,lfn], [wtp, wfp, wfn]
+    return [utp, ufp, ufn], [ltp, lfp, lfn], [wtp, wfp, wfn]
 
 def evaluate_corpus_argid(goldex, predictions, corefrmfemap, notanfeid, logger):
     ures = labldres = tokres = [0.0, 0.0, 0.0]
 
     # first sentence
-    sl = [0.0,0.0,0.0]
+    sl = [0.0, 0.0, 0.0]
     sn = goldex[0].sent_num
     logger.write("Sent#%d :\n" % sn)
     goldex[0].print_internal_sent(logger)
@@ -211,33 +216,39 @@ def evaluate_corpus_argid(goldex, predictions, corefrmfemap, notanfeid, logger):
 
 
 if __name__ == "__main__":
-
+    logger = open("argid-eval.log", "w")
     goldfile = TEST_CONLL
     goldexamples, _, _ = read_conll(goldfile)
 
     predfile = sys.argv[1]
-    predexamples, _, _ = read_conll(predfile)
+    try:
+        predexamples, _, _ = read_conll(predfile)
+    except EOFError:
+        sys.stderr.write("%s needs to be a file with frame-element annotations "
+                         "in Open-Sesame CoNLL format" % (sys.argv[1]))
     predfes = [ex.invertedfes for ex in predexamples]
 
     _, coreffmap, _ = read_frame_maps()
 
-    evalstarttime = time.time()
+    eval_start_time = time.time()
     corp_up, corp_ur, corp_uf, \
     corp_lp, corp_lr, corp_lf, \
     corp_wp, corp_wr, corp_wf, \
     corp_ures, corp_labldres, corp_tokres = evaluate_corpus_argid(
-        goldexamples, predfes, coreffmap, FEDICT.getid(EMPTY_FE))
+        goldexamples, predfes, coreffmap, FEDICT.getid(EMPTY_FE), logger)
 
+    sys.stderr.write("Arg ID Evaluation:\n")
     sys.stderr.write("\n[test] wpr = %.5f (%6.1f/%6.1f) wre = %.5f (%6.1f/%6.1f) wf1 = %.5f\n"
                      "[test] upr = %.5f (%6.1f/%6.1f) ure = %.5f (%6.1f/%6.1f) uf1 = %.5f\n"
-                     "[test] lpr = %.5f (%6.1f/%6.1f) lre = %.5f (%6.1f/%6.1f) lf1 = %.5f [took %.3f s]\n"
-                 % (corp_wp, corp_tokres[0], corp_tokres[1] + corp_tokres[0],
-                    corp_wr, corp_tokres[0], corp_tokres[-1] + corp_tokres[0],
-                    corp_wf,
-                    corp_up, corp_ures[0], corp_ures[1] + corp_ures[0],
-                    corp_ur, corp_ures[0], corp_ures[-1] + corp_ures[0],
-                    corp_uf,
-                    corp_lp, corp_labldres[0], corp_labldres[1] + corp_labldres[0],
-                    corp_lr, corp_labldres[0], corp_labldres[-1] + corp_labldres[0],
-                    corp_lf,
-                    time.time()-evalstarttime))
+                     "[test] lpr = %.5f (%6.1f/%6.1f) lre = %.5f (%6.1f/%6.1f) lf1 = %.5f "
+                     "[took %.3f s]\n"
+                     % (corp_wp, corp_tokres[0], corp_tokres[1] + corp_tokres[0],
+                     corp_wr, corp_tokres[0], corp_tokres[-1] + corp_tokres[0],
+                     corp_wf,
+                     corp_up, corp_ures[0], corp_ures[1] + corp_ures[0],
+                     corp_ur, corp_ures[0], corp_ures[-1] + corp_ures[0],
+                     corp_uf,
+                     corp_lp, corp_labldres[0], corp_labldres[1] + corp_labldres[0],
+                     corp_lr, corp_labldres[0], corp_labldres[-1] + corp_labldres[0],
+                     corp_lf,
+                     time.time()-eval_start_time))

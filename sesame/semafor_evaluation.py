@@ -1,9 +1,15 @@
 # -*- coding: utf-8 -*-
+from optparse import OptionParser
+
 import conll09 as c9
 from dataio import *
 
-# format:1   0.0 4   Measure_mass    pound.n 15  pounds  742 Count   14  Unit    15  Stuff   16:17
+
 def convert_conll_to_frame_elements(conllfile, fefile):
+    """
+    SEMAFOR style FE file format:
+    1   0.0 4   Measure_mass    pound.n 15  pounds  742 Count   14  Unit    15  Stuff   16:17
+    """
     examples, _, _ = read_conll(conllfile)
 
     notanfe = c9.FEDICT.getid(EMPTY_FE)
@@ -18,7 +24,8 @@ def convert_conll_to_frame_elements(conllfile, fefile):
             target = c9.VOCDICT.getstr(ex.tokens[tfkeys[0]])
 
             # multi-token targets
-            if len(tfkeys) > 1: tfpos += "_" + str(tfkeys[-1])
+            if len(tfkeys) > 1:
+                tfpos += "_" + str(tfkeys[-1])
             for tpos in tfkeys[1:]:
                 target += " " + c9.VOCDICT.getstr(ex.tokens[tpos])
 
@@ -35,7 +42,8 @@ def convert_conll_to_frame_elements(conllfile, fefile):
                 if festr == EMPTY_FE:
                     continue
 
-                # SEMAFOR doesn't predict, but does evaluate against multiple spans, so the following is good
+                # SEMAFOR doesn't predict, but does evaluate against multiple spans,
+                # so the following is good
                 for span in ex.invertedfes[fe]:
                     outf.write(festr + "\t")
                     if span[0] == span[1]:
@@ -158,7 +166,24 @@ def compare_fefiles(fefile1, fefile2):
                     raise Exception("mismatching spans", key, fe, sent)
 
 
+parser = OptionParser()
+parser.add_option("--mode",
+                  dest="mode",
+                  type="choice",
+                  choices=["convert_conll_to_fe", "count_frame_elements", "compare_fefiles"],
+                  default="convert_conll_to_fe")
+parser.add_option("--conll_file", type="str", metavar="FILE")
+parser.add_option("--fe_file", type="str", metavar="FILE")
+parser.add_option("--fe_file_other", type="str", metavar="FILE")
+options, _ = parser.parse_args()
+
 if __name__ == "__main__":
-    convert_conll_to_frame_elements(sys.argv[1], sys.argv[2])
-    # count_frame_elements(sys.argv[1])
-    # compare_fefiles(sys.argv[1], sys.argv[2])
+    if options.mode == "convert_conll_to_fe":
+        assert options.conll_file and options.fe_file
+        convert_conll_to_frame_elements(options.conll_file, options.fe_file)
+    elif options.mode == "count_frame_elements":
+        assert options.fe_file
+        count_frame_elements(options.fe_file)
+    elif options.mode == "compare_fefiles":
+        assert options.fe_file and options.fe_file_other
+        compare_fefiles(options.fe_file, options.fe_file_other)
