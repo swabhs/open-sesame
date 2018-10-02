@@ -167,8 +167,8 @@ def compare_fefiles(fefile1, fefile2):
 
 
 parser = OptionParser()
-parser.add_option("--mode",
-                  dest="mode",
+parser.add_option("--e_mode",
+                  dest="e_mode",
                   type="choice",
                   choices=["convert_conll_to_fe", "count_frame_elements", "compare_fefiles"],
                   default="convert_conll_to_fe")
@@ -178,12 +178,12 @@ parser.add_option("--fe_file_other", type="str", metavar="FILE")
 options, _ = parser.parse_args()
 
 if __name__ == "__main__":
-    if options.mode == "convert_conll_to_fe":
+    if options.e_mode == "convert_conll_to_fe":
         assert options.conll_file and options.fe_file
         convert_conll_to_frame_elements(options.conll_file, options.fe_file)
-    elif options.mode == "count_frame_elements":
+    elif options.e_mode == "count_frame_elements":
         assert options.fe_file
         count_frame_elements(options.fe_file)
-    elif options.mode == "compare_fefiles":
+    elif options.e_mode == "compare_fefiles":
         assert options.fe_file and options.fe_file_other
         compare_fefiles(options.fe_file, options.fe_file_other)
