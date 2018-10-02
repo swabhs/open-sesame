@@ -166,24 +166,24 @@ def compare_fefiles(fefile1, fefile2):
                     raise Exception("mismatching spans", key, fe, sent)
 
 
-parser = OptionParser()
-parser.add_option("--e_mode",
+e_parser = OptionParser()
+e_parser.add_option("--e_mode",
                   dest="e_mode",
                   type="choice",
                   choices=["convert_conll_to_fe", "count_frame_elements", "compare_fefiles"],
                   default="convert_conll_to_fe")
-parser.add_option("--conll_file", type="str", metavar="FILE")
-parser.add_option("--fe_file", type="str", metavar="FILE")
-parser.add_option("--fe_file_other", type="str", metavar="FILE")
-options, _ = parser.parse_args()
+e_parser.add_option("--conll_file", type="str", metavar="FILE")
+e_parser.add_option("--fe_file", type="str", metavar="FILE")
+e_parser.add_option("--fe_file_other", type="str", metavar="FILE")
+e_options, _ = e_parser.parse_args()
 
 if __name__ == "__main__":
-    if options.e_mode == "convert_conll_to_fe":
-        assert options.conll_file and options.fe_file
-        convert_conll_to_frame_elements(options.conll_file, options.fe_file)
-    elif options.e_mode == "count_frame_elements":
-        assert options.fe_file
-        count_frame_elements(options.fe_file)
-    elif options.e_mode == "compare_fefiles":
-        assert options.fe_file and options.fe_file_other
-        compare_fefiles(options.fe_file, options.fe_file_other)
+    if e_options.e_mode == "convert_conll_to_fe":
+        assert e_options.conll_file and e_options.fe_file
+        convert_conll_to_frame_elements(e_options.conll_file, e_options.fe_file)
+    elif e_options.e_mode == "count_frame_elements":
+        assert e_options.fe_file
+        count_frame_elements(e_options.fe_file)
+    elif e_options.e_mode == "compare_fefiles":
+        assert e_options.fe_file and e_options.fe_file_other
+        compare_fefiles(e_options.fe_file, e_options.fe_file_other)
