@@ -174,7 +174,8 @@ def get_fn_pos_by_rules(pos, token):
     elif pos == "cd":  # Cardinal Numbers
         rule_pos = "num"
     else:
-        raise Exception("Rule not defined for part-of-speech word", pos, token)
+        sys.stderr.write("WARNING: Rule not defined for part-of-speech {} word {} - treating as noun.".format(pos, token))
+        return "n"
     return rule_pos
 
 
