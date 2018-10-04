@@ -46,16 +46,18 @@ Frame-semantic parsing involves target identification, frame identification and 
 To train a model, execute:
 
 ```sh
-$ python -m sesame.$MODEL --mode train --model_name sample-$MODEL
+$ python -m sesame.$MODEL --mode train --model_name $MODEL_NAME
 ```
 
-The $MODELs are specified below. Training saves the best model on validation data in the directory `logs/sample-$MODEL/best-$MODEL-1.7-model`. The same directory will also save a `configurations.json` containing current model configuration.
+The $MODELs are specified below. Training saves the best model on validation data in the directory `logs/$MODEL_NAME/best-$MODEL-1.7-model`. The same directory will also save a `configurations.json` containing current model configuration.
 
 If training gets interrupted, it can be restarted from the last saved checkpoint by specifying `--mode refresh`.
 
 ## Pre-trained Models
 
 The downloads need to be placed under the base-directory. On extraction, these will create a `logs/` directory containing pre-trained models for target identification, frame identification using gold targets, and argument identification using gold targets and frames.
+
+*Note* There is a [known open issue](https://github.com/swabhs/open-sesame/issues/15) about pretrained models not being able to replicate the reported performance on a different machine. It is recommended to train and test from scratch - performance can be replicated (within a small margin of error) to the performance reported below.
 
 |           |  FN 1.5 Dev | FN 1.5 Test | FN 1.5 Models                                                                             |  FN 1.7 Dev | FN 1.7 Test | FN 1.7 Models                                                                             |
 |-----------|------------:|------------:|------------------------------------------------------------------------------------------------------|------------:|------------:|------------------------------------------------------------------------------------------------------|
@@ -69,10 +71,10 @@ The different models for target identification, frame identification and argumen
 To test under a given model, execute:
 
 ```sh
-$ python -m sesame.$MODEL --mode test --model_name sample-$MODEL
+$ python -m sesame.$MODEL --mode test --model_name $MODEL_NAME
 ```
 
-The output, in a CoNLL 2009-like format will be written to `logs/sample-$MODEL/predicted-1.7-$MODEL-test.conll` and in the [frame-elements file format](https://github.com/Noahs-ARK/semafor/tree/master/training/data) to `logs/sample-$MODEL/predicted-1.7-$MODEL-test.fes` for frame and argument identification.
+The output, in a CoNLL 2009-like format will be written to `logs/$MODEL_NAME/predicted-1.7-$MODEL-test.conll` and in the [frame-elements file format](https://github.com/Noahs-ARK/semafor/tree/master/training/data) to `logs/$MODEL_NAME/predicted-1.7-$MODEL-test.fes` for frame and argument identification.
 
 ### 1. Target Identification
 
@@ -98,17 +100,17 @@ For predicting targets, frames and arguments on unannotated data, pretrained mod
 
 ```sh
 $ python -m sesame.targetid --mode predict \
-                            --model_name pretrained-targetid \
+                            --model_name fn1.7-pretrained-targetid \
                             --raw_input sentences.txt
 $ python -m sesame.frameid --mode predict \
-                           --model_name pretrained-frameid \
-                           --raw_input logs/pretrained-targetid/predicted-targets.conll
+                           --model_name fn1.7-pretrained-frameid \
+                           --raw_input logs/fn1.7-pretrained-targetid/predicted-targets.conll
 $ python -m sesame.argid --mode predict \
-                         --model_name pretrained-argid \
-                         --raw_input logs/pretrained-frameid/predicted-frames.conll
+                         --model_name fn1.7-pretrained-argid \
+                         --raw_input logs/fn1.7-pretrained-frameid/predicted-frames.conll
 ```
 
-The resulting frame-semantic parses will be written to `logs/pretrained-argid/predicted-args.conll` in the same CoNLL 2009-like format.
+The resulting frame-semantic parses will be written to `logs/fn1.7-pretrained-argid/predicted-args.conll` in the same CoNLL 2009-like format.
 
 ## Contact and Reference
 
