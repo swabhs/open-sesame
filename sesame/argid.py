@@ -141,8 +141,8 @@ configuration = {"train": train_conll,
                  "hidden_dim": 64,
                  "use_dropout": USE_DROPOUT,
                  "pretrained_embedding_dim": PRETDIM,
-                 "num_epochs": 100 if not options.exemplar else 250,
-                 "patience": 25,
+                 "num_epochs": 10 if not options.exemplar else 25,
+                 "patience": 3,
                  "eval_after_every_epochs": 100,
                  "dev_eval_epoch_frequency": 5}
 configuration_file = os.path.join(model_dir, "configuration.json")
@@ -867,7 +867,7 @@ def print_eval_result(examples, expredictions, logger):
     sys.stderr.write("\n[test] wpr = %.5f (%.1f/%.1f) wre = %.5f (%.1f/%.1f)\n"
                      "[test] upr = %.5f (%.1f/%.1f) ure = %.5f (%.1f/%.1f)\n"
                      "[test] lpr = %.5f (%.1f/%.1f) lre = %.5f (%.1f/%.1f)\n"
-                     "[test] wf1 = %.5f uf1 = %.5f lf1 = %.5f [took %.3f s]\n"
+                     "[test] wf1 = %.5f uf1 = %.5f lf1 = %.5f [took %.3fs]\n"
                      % (corp_wp, corp_tokres[0], corp_tokres[1] + corp_tokres[0],
                         corp_wr, corp_tokres[0], corp_tokres[-1] + corp_tokres[0],
                         corp_up, corp_ures[0], corp_ures[1] + corp_ures[0],
@@ -904,9 +904,9 @@ if options.mode in ["train", "refresh"]:
         random.shuffle(trainexamples)
 
         for idx, trex in enumerate(trainexamples, 1):
-            if (idx - 1) % LOSS_EVAL_EPOCH == 0:
+            if (idx - 1) % LOSS_EVAL_EPOCH == 0 and idx > 1:
                 adam.status()
-                sys.stderr.write("epoch = %d.%d loss = %.6f [took %.3f s]\n" % (
+                sys.stderr.write("epoch=%d.%d loss=%.4f [took %.3fs]\n" % (
                     epoch, idx-1, (loss/idx), time.time() - starttime))
                 starttime = time.time()
 
@@ -968,7 +968,7 @@ if options.mode in ["train", "refresh"]:
                     sys.stderr.write(" -- saving to {}".format(model_file_name))
                     model.save(model_file_name)
                     last_updated_epoch = epoch
-                sys.stderr.write(" [took %.3f s]\n" % (time.time() - devstarttime))
+                sys.stderr.write(" [took %.3fs]\n" % (time.time() - devstarttime))
                 starttime = time.time()
         if epoch - last_updated_epoch > PATIENCE:
             sys.stderr.write("Ran out of patience, ending training.\n")
@@ -999,7 +999,7 @@ elif options.mode == "ensemble":
         testargmax = decode(exfs[tidx - 1], len(testex.tokens), valid_fes_for_frame)
         testpredictions.append(testargmax)
 
-    sys.stderr.write(" [took %.3f s]\n" % (time.time() - teststarttime))
+    sys.stderr.write(" [took %.3fs]\n" % (time.time() - teststarttime))
     sys.stderr.write("printing output conll to " + out_conll_file + " ... ")
     print_as_conll(devexamples, testpredictions)
     sys.stderr.write("done!\n")
@@ -1026,7 +1026,7 @@ elif options.mode == "test":
                                   testidx=tidx - 1)
         testpredictions.append(testargmax)
 
-    sys.stderr.write(" [took %.3f s]\n" % (time.time() - teststarttime))
+    sys.stderr.write(" [took %.3fs]\n" % (time.time() - teststarttime))
     sys.stderr.write("printing output conll to " + out_conll_file + " ... ")
     print_as_conll(devexamples, testpredictions)
     sys.stderr.write("done!\n")
