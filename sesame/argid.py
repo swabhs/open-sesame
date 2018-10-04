@@ -311,12 +311,6 @@ if USE_PTB_CONSTITS:
 
 
 def get_base_embeddings(trainmode, unkdtokens, tg_start, sentence):
-    pw_i = parameter(w_i)
-    pb_i = parameter(b_i)
-
-    pw_bi = parameter(w_bi)
-    pb_bi = parameter(b_bi)
-
     sentlen = len(unkdtokens)
 
     if trainmode:
@@ -326,15 +320,13 @@ def get_base_embeddings(trainmode, unkdtokens, tg_start, sentence):
     pos_x = [p_x[pos] for pos in sentence.postags]
     dist_x = [scalarInput(i - tg_start + 1) for i in xrange(sentlen)]
 
-    baseinp_x = [(pw_i * concatenate([emb_x[j], pos_x[j], dist_x[j]]) + pb_i) for j in xrange(sentlen)]
+    baseinp_x = [(w_i * concatenate([emb_x[j], pos_x[j], dist_x[j]]) + b_i) for j in xrange(sentlen)]
 
     if USE_WV:
-        pw_e = parameter(w_e)
-        pb_e = parameter(b_e)
         for j in xrange(sentlen):
             if unkdtokens[j] in wvs:
                 nonupdatedwv = nobackprop(e_x[unkdtokens[j]])
-                baseinp_x[j] = baseinp_x[j] + pw_e * nonupdatedwv + pb_e
+                baseinp_x[j] = baseinp_x[j] + w_e * nonupdatedwv + b_e
 
     embposdist_x = [rectify(baseinp_x[j]) for j in xrange(sentlen)]
 
@@ -345,18 +337,15 @@ def get_base_embeddings(trainmode, unkdtokens, tg_start, sentence):
     basefwd = bfinit.transduce(embposdist_x)
     brinit = baserevlstm.initial_state()
     baserev = brinit.transduce(reversed(embposdist_x))
-    basebi_x = [rectify(pw_bi * concatenate([basefwd[eidx], baserev[sentlen - eidx - 1]]) + pb_bi) for eidx in
-                xrange(sentlen)]
+    basebi_x = [rectify(w_bi * concatenate([basefwd[eidx], baserev[sentlen - eidx - 1]]) +
+                    b_bi) for eidx in xrange(sentlen)]
 
     if USE_DEPS:
-        pw_di = parameter(w_di)
-        pb_di = parameter(b_di)
-
         dhead_x = [embposdist_x[dephead] for dephead in sentence.depheads]
         dheadp_x = [pos_x[dephead] for dephead in sentence.depheads]
         drel_x = [dr_x[deprel] for deprel in sentence.deprels]
-        baseinp_x = [rectify(pw_di * concatenate([dhead_x[j], dheadp_x[j], drel_x[j], basebi_x[j]]) + pb_di) for j in
-                     xrange(sentlen)]
+        baseinp_x = [rectify(w_di * concatenate([dhead_x[j], dheadp_x[j], drel_x[j], basebi_x[j]]) +
+                        b_di) for j in xrange(sentlen)]
         basebi_x = baseinp_x
 
     return basebi_x
@@ -438,9 +427,7 @@ def get_deppath_embeddings(sentence, embpos_x):
         prinit = pathrevlstm.initial_state()
         pathrev = prinit.transduce(reversed(shp))
 
-        pw_p = parameter(w_p)
-        pb_p = parameter(b_p)
-        pathlstm = rectify(pw_p * concatenate([pathfwd[-1], pathrev[-1]]) + pb_p)
+        pathlstm = rectify(w_p * concatenate([pathfwd[-1], pathrev[-1]]) + b_p)
 
         spaths[spath] = pathlstm
     return spaths
@@ -458,20 +445,13 @@ def get_cpath_embeddings(sentence):
         cprinit = cpathrevlstm.initial_state()
         cpathrev = cprinit.transduce(reversed(shp))
 
-        pw_cp = parameter(w_cp)
-        pb_cp = parameter(b_cp)
-        cpathlstm = rectify(pw_cp * concatenate([cpathfwd[-1], cpathrev[-1]]) + pb_cp)
+        cpathlstm = rectify(w_cp * concatenate([cpathfwd[-1], cpathrev[-1]]) + b_cp)
 
         phrpaths[phrpath] = cpathlstm
     return phrpaths
 
 
 def get_factor_expressions(fws, bws, tfemb, tfdict, valid_fes, sentence, spaths_x=None, cpaths_x=None):
-    pw_z = parameter(w_z)
-    pb_z = parameter(b_z)
-    pw_f = parameter(w_f)
-    pb_f = parameter(b_f)
-
     factexprs = {}
     sentlen = len(fws)
 
@@ -508,7 +488,7 @@ def get_factor_expressions(fws, bws, tfemb, tfdict, valid_fes, sentence, spaths_
                 else:
                     fefixed = fe_x[y]
                 fbemb_ijy = concatenate([fefixed, fbemb_ij])
-                factexprs[fctr] = pw_f * rectify(pw_z * fbemb_ijy + pb_z) + pb_f
+                factexprs[fctr] = w_f * rectify(w_z * fbemb_ijy + b_z) + b_f
     return factexprs
 
 
@@ -668,11 +648,6 @@ def get_constit_loss(fws, bws, goldspans):
     if len(goldspans) == 0:
         return None, 0
 
-    pw_fb = parameter(w_fb)
-    pb_fb = parameter(b_fb)
-    pw_c = parameter(w_c)
-    pb_c = parameter(b_c)
-
     losses = []
     sentlen = len(fws)
 
@@ -680,7 +655,7 @@ def get_constit_loss(fws, bws, goldspans):
         istart = 0
         if USE_SPAN_CLIP and j > ALLOWED_SPANLEN: istart = max(0, j - ALLOWED_SPANLEN)
         for i in xrange(istart, j + 1):
-            constit_ij = pw_c * rectify(pw_fb * concatenate([fws[i][j], bws[i][j]]) + pb_fb) + pb_c
+            constit_ij = w_c * rectify(w_fb * concatenate([fws[i][j], bws[i][j]]) + b_fb) + b_c
             logloss = log_softmax(constit_ij)
 
             isconstit = int((i, j) in goldspans)
