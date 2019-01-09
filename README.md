@@ -124,4 +124,4 @@ For questions and usage issues, please contact `swabha@cs.cmu.edu`. If you use o
   year={2017}
 }
 ```
-
+Copyright [2018] [Swabha Swayamdipta]
