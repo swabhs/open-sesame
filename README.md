@@ -114,7 +114,7 @@ The resulting frame-semantic parses will be written to `logs/fn1.7-pretrained-ar
 
 ## Contact and Reference
 
-For questions and usage issues, please contact `swabha@cs.cmu.edu`. If you use open-sesame for research, please cite [our paper](https://arxiv.org/pdf/1706.09528.pdf) as follows:
+For questions and usage issues, please contact `sswayamd@alumni.cmu.edu`. If you use open-sesame for research, please cite [our paper](https://arxiv.org/pdf/1706.09528.pdf) as follows:
 
 ```
 @article{swayamdipta:17,
