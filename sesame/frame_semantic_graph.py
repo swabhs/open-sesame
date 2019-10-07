@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from globalconfig import DEBUG_MODE
+from .globalconfig import DEBUG_MODE
+
 
 class LexicalUnit(object):
 
@@ -19,7 +20,7 @@ class LexicalUnit(object):
     def __ne__(self, other):
         # Not strictly necessary, but to avoid having both x==y and x!=y
         # True at the same time
-        return not(self == other)
+        return not (self == other)
 
 
 class Frame(object):
@@ -39,7 +40,7 @@ class Frame(object):
     def __ne__(self, other):
         # Not strictly necessary, but to avoid having both x==y and x!=y
         # True at the same time
-        return not(self == other)
+        return not (self == other)
 
 
 class FrameElement(object):
@@ -59,7 +60,7 @@ class FrameElement(object):
     def __ne__(self, other):
         # Not strictly necessary, but to avoid having both x==y and x!=y
         # True at the same time
-        return not(self == other)
+        return not (self == other)
 
 
 class FrameSemParse(object):

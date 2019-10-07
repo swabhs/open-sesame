@@ -94,4 +94,4 @@ BIO_INDEX_DICT = {
         "S": SINGULAR
 }
 
-INDEX_BIO_DICT = {index: tag for tag, index in BIO_INDEX_DICT.iteritems()}
+INDEX_BIO_DICT = {index: tag for tag, index in BIO_INDEX_DICT.items()}

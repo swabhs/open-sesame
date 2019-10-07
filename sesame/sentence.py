@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from itertools import izip
+
 from nltk.tree import ParentedTree
 
 
@@ -26,7 +26,7 @@ class Sentence(object):
         if syn_type == "dep":
             self.depheads = [e.dephead - 1 for e in elements]
             self.root = None
-            for i in xrange(len(self.depheads)):
+            for i in range(len(self.depheads)):
                 if self.depheads[i] == -1:
                     self.depheads[i] = i  # head of ROOT is itself
                     self.root = i
@@ -35,7 +35,7 @@ class Sentence(object):
             self.deprels = [e.deprel for e in elements]
 
             self.rootpath = [self.get_path_to_root(
-                i) for i in xrange(len(self.tokens))]
+                i) for i in range(len(self.tokens))]
             self.outheads = self.get_heads_outside()
             self.paths = {}
             self.shortest_paths = {}
@@ -58,10 +58,10 @@ class Sentence(object):
 
     def get_heads_outside(self):
         outheads = {}
-        for j in xrange(len(self.tokens)):
-            for i in xrange(j + 1):
+        for j in range(len(self.tokens)):
+            for i in range(j + 1):
                 outheads[(i, j)] = sum(
-                    [1 for s in xrange(i, j + 1) if not i <= self.depheads[s] <= j])
+                    [1 for s in range(i, j + 1) if not i <= self.depheads[s] <= j])
         return outheads
 
     def get_common_path(self, src, dest):
@@ -80,7 +80,7 @@ class Sentence(object):
         pathfrom = self.rootpath[src][::-1]
         pathto = self.rootpath[dest][::-1]
         i = 0
-        for n1, n2 in izip(pathfrom, pathto):
+        for n1, n2 in zip(pathfrom, pathto):
             if n1 == n2:
                 i += 1
                 continue
@@ -95,14 +95,14 @@ class Sentence(object):
     def get_all_paths_to(self, node):
         if node in self.paths:
             return
-        for n in xrange(len(self.tokens)):
+        for n in range(len(self.tokens)):
             if n != node and (n, node) not in self.paths:
                 self.paths[(n, node)] = self.get_common_path(n, node)
         self.get_all_shortest_paths(node)
 
     def get_all_shortest_paths(self, target):
-        for j in xrange(len(self.tokens)):
-            for i in xrange(j + 1):
+        for j in range(len(self.tokens)):
+            for i in range(j + 1):
                 self.shortest_paths[(i, j, target)] = frozenset(
                     self.get_shortest_path_in_span(target, (i, j)))
 
@@ -143,14 +143,14 @@ class Sentence(object):
         # Get stuff for constit features.
         self.leafnodes = [k for k in self.cparse.subtrees(
             lambda t: t.height() == 2)]
-        for a in xrange(len(self.leafnodes)):
+        for a in range(len(self.leafnodes)):
             if self.leafnodes[a][0] != a:
                 raise Exception("order mixup!")
         self.get_cpath_to_root()
 
         # Get all lowest common ancestors.
-        for j in xrange(len(self.leafnodes)):
-            for k in xrange(j, len(self.leafnodes)):
+        for j in range(len(self.leafnodes)):
+            for k in range(j, len(self.leafnodes)):
                 lca, lcaid = self.get_lca(self.leafnodes[j], self.leafnodes[k])
                 self.lca[(j, k)] = (lca, lcaid)
 
@@ -183,7 +183,7 @@ class Sentence(object):
         pathfrom = self.crootpaths[src.label()][::-1]
         pathto = self.crootpaths[dest.label()][::-1]
         common = 0
-        for n1, n2 in izip(pathfrom, pathto):
+        for n1, n2 in zip(pathfrom, pathto):
             if n1 == n2:
                 common += 1
                 continue
@@ -196,7 +196,7 @@ class Sentence(object):
         pathfrom = self.crootpaths[src.label()][::-1]
         pathto = self.crootpaths[dest.label()][::-1]
         common = 0
-        for n1, n2 in izip(pathfrom, pathto):
+        for n1, n2 in zip(pathfrom, pathto):
             if n1 == n2:
                 common += 1
                 continue
@@ -204,8 +204,8 @@ class Sentence(object):
         return pathfrom[common - 1:][::-1] + pathto[common:]
 
     def get_cpath_to_target(self, target):
-        for j in xrange(len(self.leafnodes)):
-            for k in xrange(j, len(self.leafnodes)):
+        for j in range(len(self.leafnodes)):
+            for k in range(j, len(self.leafnodes)):
                 lca, _ = self.lca[(j, k)]
                 path = self.get_common_cpath(lca, self.leafnodes[target])
                 self.cpaths[(j, k, target)] = frozenset(

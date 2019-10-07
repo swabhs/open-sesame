@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
-import json
-import os
-import sys
-import time
 from optparse import OptionParser
 
 from dynet import *
-from evaluation import *
-from raw_data import make_data_instance
-from semafor_evaluation import convert_conll_to_frame_elements
 
+from sesame.frame_semantic_graph import Frame
+from .evaluation import *
+from .semafor_evaluation import convert_conll_to_frame_elements
 
 optpr = OptionParser()
 optpr.add_option("--mode", dest="mode", type="choice", choices=["train", "test", "refresh", "predict"], default="train")
@@ -56,7 +52,8 @@ def find_multitokentargets(examples, split):
             if len(tfs) > 1:
                 raise Exception("different frames for neighboring targets!", tr.targetframedict)
     sys.stderr.write("multi-token targets in %s: %.3f%% [%d / %d]\n"
-                     %(split, multitoktargs*100/tottargs, multitoktargs, tottargs))
+                     % (split, multitoktargs * 100 / tottargs, multitoktargs, tottargs))
+
 
 trainexamples, m, t = read_conll(train_conll)
 find_multitokentargets(trainexamples, "train")
@@ -65,17 +62,16 @@ post_train_lock_dicts()
 lufrmmap, relatedlus = read_related_lus()
 if USE_WV:
     pretrained_embeddings_map = get_wvec_map()
-    PRETRAINED_DIM = len(pretrained_embeddings_map.values()[0])
+    PRETRAINED_DIM = len(list(pretrained_embeddings_map.values())[0])
 
 lock_dicts()
 UNKTOKEN = VOCDICT.getid(UNK)
-
 
 if options.mode in ["train", "refresh"]:
     devexamples, m, t = read_conll(DEV_CONLL)
     find_multitokentargets(devexamples, "dev/test")
     out_conll_file = "{}predicted-{}-frameid-dev.conll".format(model_dir, VERSION)
-elif options.mode  == "test":
+elif options.mode == "test":
     devexamples, m, t = read_conll(TEST_CONLL)
     find_multitokentargets(devexamples, "dev/test")
     out_conll_file = "{}predicted-{}-frameid-test.conll".format(model_dir, VERSION)
@@ -144,9 +140,11 @@ for key in sorted(configuration):
 
 sys.stderr.write("\n")
 
+
 def print_data_status(fsp_dict, vocab_str):
     sys.stderr.write("# {} = {}\n\tUnseen in dev/test = {}\n\tUnlearnt in dev/test = {}\n".format(
         vocab_str, fsp_dict.size(), fsp_dict.num_unks()[0], fsp_dict.num_unks()[1]))
+
 
 print_data_status(VOCDICT, "Tokens")
 print_data_status(POSDICT, "POS tags")
@@ -171,7 +169,7 @@ if USE_WV:
     # Embedding for unknown pretrained embedding.
     u_x = model.add_lookup_parameters((1, PRETRAINED_DIM), init='glorot')
 
-    w_e = model.add_parameters((LSTMINPDIM, PRETRAINED_DIM+INPDIM))
+    w_e = model.add_parameters((LSTMINPDIM, PRETRAINED_DIM + INPDIM))
     b_e = model.add_parameters((LSTMINPDIM, 1))
 
 w_i = model.add_parameters((LSTMINPDIM, INPDIM))
@@ -182,12 +180,13 @@ builders = [
     LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMDIM, model),
 ]
 
-tlstm = LSTMBuilder(LSTMDEPTH, 2*LSTMDIM, LSTMDIM, model)
+tlstm = LSTMBuilder(LSTMDEPTH, 2 * LSTMDIM, LSTMDIM, model)
 
 w_z = model.add_parameters((HIDDENDIM, LSTMDIM + LUDIM + LPDIM))
 b_z = model.add_parameters((HIDDENDIM, 1))
 w_f = model.add_parameters((FRAMEDICT.size(), HIDDENDIM))
 b_f = model.add_parameters((FRAMEDICT.size(), 1))
+
 
 def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldframe=None):
     renew_cg()
@@ -198,7 +197,7 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
     pos_x = [p_x[pos] for pos in postags]
 
     emb2_xi = []
-    for i in xrange(sentlen + 1):
+    for i in range(sentlen + 1):
         if tokens[i] in pretrained_embeddings_map:
             # If update set to False, prevents pretrained embeddings from being updated.
             emb_without_backprop = lookup(e_x, tokens[i], update=True)
@@ -207,7 +206,7 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
             features_at_i = concatenate([emb_x[i], pos_x[i], u_x])
         emb2_xi.append(w_e * features_at_i + b_e)
 
-    emb2_x = [rectify(emb2_xi[i]) for i in xrange(sentlen+1)]
+    emb2_x = [rectify(emb2_xi[i]) for i in range(sentlen + 1)]
 
     # initializing the two LSTMs
     if USE_DROPOUT and trainmode:
@@ -254,9 +253,10 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
     objective = -esum(losses) if losses else None
     return objective, prediction
 
+
 def print_as_conll(goldexamples, pred_targmaps):
     with codecs.open(out_conll_file, "w", "utf-8") as f:
-        for g,p in zip(goldexamples, pred_targmaps):
+        for g, p in zip(goldexamples, pred_targmaps):
             result = g.get_predicted_frame_conll(p) + "\n"
             f.write(result)
         f.close()
@@ -276,18 +276,18 @@ if options.mode in ["train", "refresh"]:
     loss = 0.0
     last_updated_epoch = 0
 
-    for epoch in xrange(NUM_EPOCHS):
+    for epoch in range(NUM_EPOCHS):
         random.shuffle(trainexamples)
         for idx, trex in enumerate(trainexamples, 1):
             if idx % EVAL_EVERY_EPOCH == 0:
                 trainer.status()
-                sys.stderr.write("epoch = %d.%d loss = %.6f\n" %(epoch, idx, loss/idx))
+                sys.stderr.write("epoch = %d.%d loss = %.6f\n" % (epoch, idx, loss / idx))
 
             inptoks = []
             unk_replace_tokens(trex.tokens, inptoks, VOCDICT, UNK_PROB, UNKTOKEN)
 
-            trexloss,_ = identify_frames(
-                builders, inptoks, trex.postags, trex.lu, trex.targetframedict.keys(), trex.frame)
+            trexloss, _ = identify_frames(
+                builders, inptoks, trex.postags, trex.lu, list(trex.targetframedict.keys()), trex.frame)
 
             if trexloss is not None:
                 loss += trexloss.scalar_value()
@@ -301,7 +301,7 @@ if options.mode in ["train", "refresh"]:
                 for devex in devexamples:
                     devludict = devex.get_only_targets()
                     dl, predicted = identify_frames(
-                        builders, devex.tokens, devex.postags, devex.lu, devex.targetframedict.keys())
+                        builders, devex.tokens, devex.postags, devex.lu, list(devex.targetframedict.keys()))
                     if dl is not None:
                         devloss += dl.scalar_value()
                     predictions.append(predicted)
@@ -313,7 +313,7 @@ if options.mode in ["train", "refresh"]:
                 devp, devr, devf = calc_f(corpus_result)
                 devtp, devfp, devfn = corpus_result
                 sys.stderr.write("[dev epoch=%d.%d] loss = %.6f f1 = %.4f (%.1f/%.1f)"
-                                 % (epoch, idx, devloss/devtagged, devf, devtp, devtp + devfp))
+                                 % (epoch, idx, devloss / devtagged, devf, devtp, devtp + devfp))
                 if devf > best_dev_f1:
                     best_dev_f1 = devf
                     with open(os.path.join(model_dir, "best-dev-f1.txt"), "w") as fout:
@@ -338,13 +338,14 @@ elif options.mode == "test":
     testpredictions = []
 
     sn = devexamples[0].sent_num
-    sl = [0.0,0.0,0.0]
+    sl = [0.0, 0.0, 0.0]
     logger = open("{}/frameid-prediction-analysis.log".format(model_dir), "w")
     logger.write("Sent#%d :\n" % sn)
     devexamples[0].print_internal_sent(logger)
 
     for testex in devexamples:
-        _, predicted = identify_frames(builders, testex.tokens, testex.postags, testex.lu, testex.targetframedict.keys())
+        _, predicted = identify_frames(builders, testex.tokens, testex.postags, testex.lu,
+                                       list(testex.targetframedict.keys()))
 
         tpfpfn = evaluate_example_frameid(testex.frame, predicted)
         corpus_tpfpfn = np.add(corpus_tpfpfn, tpfpfn)
@@ -355,14 +356,14 @@ elif options.mode == "test":
         if sentnum != sn:
             lp, lr, lf = calc_f(sl)
             logger.write("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
-                  "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
-                  "\n-----------------------------\n"
-                  % (sl[0], sl[0]+sl[1], sl[0]+sl[-1],
-                     sn,
-                     lr, sl[0], sl[-1] + sl[0],
-                     lp, sl[0], sl[1] + sl[0],
-                     lf))
-            sl = [0.0,0.0,0.0]
+                         "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
+                         "\n-----------------------------\n"
+                         % (sl[0], sl[0] + sl[1], sl[0] + sl[-1],
+                            sn,
+                            lr, sl[0], sl[-1] + sl[0],
+                            lp, sl[0], sl[1] + sl[0],
+                            lf))
+            sl = [0.0, 0.0, 0.0]
             sn = sentnum
             logger.write("Sent#%d :\n" % sentnum)
             testex.print_internal_sent(logger)
@@ -373,22 +374,22 @@ elif options.mode == "test":
         testex.print_external_frame(predicted, logger)
 
         sl = np.add(sl, tpfpfn)
-        logger.write("{} / {} / {}\n".format(tpfpfn[0], tpfpfn[0]+tpfpfn[1], tpfpfn[0]+tpfpfn[-1]))
+        logger.write("{} / {} / {}\n".format(tpfpfn[0], tpfpfn[0] + tpfpfn[1], tpfpfn[0] + tpfpfn[-1]))
 
     # last sentence
     lp, lr, lf = calc_f(sl)
     logger.write("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
-          "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
-          "\n-----------------------------\n"
-          % (sl[0], sl[0]+sl[1], sl[0]+sl[-1],
-             sentnum,
-             lp, sl[0], sl[1] + sl[0],
-             lr, sl[0], sl[-1] + sl[0],
-             lf))
+                 "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
+                 "\n-----------------------------\n"
+                 % (sl[0], sl[0] + sl[1], sl[0] + sl[-1],
+                    sentnum,
+                    lp, sl[0], sl[1] + sl[0],
+                    lr, sl[0], sl[-1] + sl[0],
+                    lf))
 
     testp, testr, testf = calc_f(corpus_tpfpfn)
     testtp, testfp, testfn = corpus_tpfpfn
-    sys.stderr.write("[test] p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f\n" %(
+    sys.stderr.write("[test] p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f\n" % (
         testp, testtp, testtp + testfp,
         testr, testtp, testtp + testfp,
         testf))
@@ -408,7 +409,8 @@ elif options.mode == "predict":
 
     predictions = []
     for instance in instances:
-        _, prediction = identify_frames(builders, instance.tokens, instance.postags, instance.lu, instance.targetframedict.keys())
+        _, prediction = identify_frames(builders, instance.tokens, instance.postags, instance.lu,
+                                        list(instance.targetframedict.keys()))
         predictions.append(prediction)
     sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
     print_as_conll(instances, predictions)

@@ -6,7 +6,7 @@ exfs = {}
 ensemblename = sys.argv[1]
 
 sys.stderr.write("reading " + ensemblename + " factors... ")
-for en in xrange(1, 6):
+for en in range(1, 6):
     sys.stderr.write(str(en) + " ")
     enf = open(ensemblename + str(en), "rb")
 

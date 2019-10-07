@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
-import json
-import os
-import sys
-import time
 from optparse import OptionParser
 
 from dynet import *
-from evaluation import *
-from raw_data import make_data_instance
-from semafor_evaluation import convert_conll_to_frame_elements
 
+from sesame.frame_semantic_graph import LexicalUnit
+from .evaluation import *
+from .raw_data import make_data_instance
 
 optpr = OptionParser()
 optpr.add_option("--mode", dest="mode", type="choice",
@@ -59,6 +55,7 @@ def combine_examples(corpus_ex):
         len(corpus_ex), len(combined_ex)))
     return combined_ex
 
+
 train_examples, _, _ = read_conll(train_conll)
 combined_train = combine_examples(train_examples)
 
@@ -68,7 +65,7 @@ post_train_lock_dicts()
 
 # Read pretrained word embeddings.
 pretrained_map = get_wvec_map()
-PRETRAINED_DIM = len(pretrained_map.values()[0])
+PRETRAINED_DIM = len(list(pretrained_map.values())[0])
 
 lock_dicts()
 UNKTOKEN = VOCDICT.getid(UNK)
@@ -77,14 +74,14 @@ if options.mode in ["train", "refresh"]:
     dev_examples, _, _ = read_conll(DEV_CONLL)
     combined_dev = combine_examples(dev_examples)
     out_conll_file = "{}predicted-{}-targetid-dev.conll".format(model_dir, VERSION)
-elif options.mode  == "test":
+elif options.mode == "test":
     dev_examples, m, t = read_conll(TEST_CONLL)
     combined_dev = combine_examples(dev_examples)
     out_conll_file = "{}predicted-{}-targetid-test.conll".format(model_dir, VERSION)
 elif options.mode == "predict":
     assert options.raw_input is not None
     with open(options.raw_input, "r") as fin:
-        instances = [make_data_instance(line, i) for i,line in enumerate(fin)]
+        instances = [make_data_instance(line, i) for i, line in enumerate(fin)]
     out_conll_file = "{}predicted-targets.conll".format(model_dir)
 else:
     raise Exception("Invalid parser mode", options.mode)
@@ -142,9 +139,11 @@ for key in sorted(configuration):
 
 sys.stderr.write("\n")
 
+
 def print_data_status(fsp_dict, vocab_str):
     sys.stderr.write("# {} = {}\n\tUnseen in dev/test = {}\n\tUnlearnt in dev/test = {}\n".format(
         vocab_str, fsp_dict.size(), fsp_dict.num_unks()[0], fsp_dict.num_unks()[1]))
+
 
 print_data_status(VOCDICT, "Tokens")
 print_data_status(POSDICT, "POS tags")
@@ -174,7 +173,8 @@ def get_fn_pos_by_rules(pos, token):
     elif pos == "cd":  # Cardinal Numbers
         rule_pos = "num"
     else:
-        sys.stderr.write("WARNING: Rule not defined for part-of-speech {} word {} - treating as noun.".format(pos, token))
+        sys.stderr.write(
+            "WARNING: Rule not defined for part-of-speech {} word {} - treating as noun.".format(pos, token))
         return "n"
     return rule_pos
 
@@ -244,7 +244,7 @@ builders = [
     LSTMBuilder(LSTM_DEPTH, LSTM_INP_DIM, LSTM_DIM, model),
 ]
 
-w_z = model.add_parameters((HIDDEN_DIM, 2*LSTM_DIM))
+w_z = model.add_parameters((HIDDEN_DIM, 2 * LSTM_DIM))
 b_z = model.add_parameters((HIDDEN_DIM, 1))
 w_f = model.add_parameters((2, HIDDEN_DIM))  # prediction: is a target or not.
 b_f = model.add_parameters((2, 1))
@@ -264,7 +264,7 @@ def identify_targets(builders, tokens, postags, lemmas, gold_targets=None):
     lem_x = [l_x[lem] for lem in lemmas]
 
     emb2_xi = []
-    for i in xrange(sentlen):
+    for i in range(sentlen):
         if tokens[i] in pretrained_map:
             # Prevent the pretrained embeddings from being updated.
             emb_without_backprop = lookup(e_x, tokens[i], update=False)
@@ -273,7 +273,7 @@ def identify_targets(builders, tokens, postags, lemmas, gold_targets=None):
             features_at_i = concatenate([emb_x[i], pos_x[i], lem_x[i], u_x])
         emb2_xi.append(w_e * features_at_i + b_e)
 
-    emb2_x = [rectify(emb2_xi[i]) for i in xrange(sentlen)]
+    emb2_x = [rectify(emb2_xi[i]) for i in range(sentlen)]
 
     # Initializing the two LSTMs.
     if USE_DROPOUT and train_mode:
@@ -286,7 +286,7 @@ def identify_targets(builders, tokens, postags, lemmas, gold_targets=None):
 
     losses = []
     predicted_targets = {}
-    for i in xrange(sentlen):
+    for i in range(sentlen):
         if not check_if_potential_target(lemmas[i]):
             continue
         h_i = concatenate([fw_x[i], bw_x[sentlen - i - 1]])
@@ -332,27 +332,26 @@ if options.mode in ["refresh"]:
     fin.close()
     sys.stderr.write("Best dev F1 so far = %.4f\n" % best_dev_f1)
 
-
 if options.mode in ["train", "refresh"]:
     loss = 0.0
     train_result = [0.0, 0.0, 0.0]
 
     last_updated_epoch = 0
 
-    for epoch in xrange(NUM_EPOCHS):
+    for epoch in range(NUM_EPOCHS):
         random.shuffle(combined_train)
         for idx, trex in enumerate(combined_train, 1):
             if idx % EVAL_EVERY_EPOCH == 0:
                 trainer.status()
                 _, _, trainf = calc_f(train_result)
-                sys.stderr.write("epoch = %d.%d loss = %.6f train f1 = %.4f\n" %(epoch, idx, loss/idx, trainf))
+                sys.stderr.write("epoch = %d.%d loss = %.6f train f1 = %.4f\n" % (epoch, idx, loss / idx, trainf))
                 train_result = [0.0, 0.0, 0.0]
             inptoks = []
             unk_replace_tokens(trex.tokens, inptoks, VOCDICT, UNK_PROB, UNKTOKEN)
 
             trex_loss, trexpred = identify_targets(
-                builders, inptoks, trex.postags, trex.lemmas, gold_targets=trex.targetframedict.keys())
-            trainex_result = evaluate_example_targetid(trex.targetframedict.keys(), trexpred)
+                builders, inptoks, trex.postags, trex.lemmas, gold_targets=list(trex.targetframedict.keys()))
+            trainex_result = evaluate_example_targetid(list(trex.targetframedict.keys()), trexpred)
             train_result = np.add(train_result, trainex_result)
 
             if trex_loss is not None:
@@ -372,7 +371,7 @@ if options.mode in ["train", "refresh"]:
                         devloss += dl.scalar_value()
                     predictions.append(predicted)
 
-                    devex_result = evaluate_example_targetid(devex.targetframedict.keys(), predicted)
+                    devex_result = evaluate_example_targetid(list(devex.targetframedict.keys()), predicted)
                     corpus_result = np.add(corpus_result, devex_result)
                     devtagged += 1
 
@@ -380,7 +379,7 @@ if options.mode in ["train", "refresh"]:
                 dev_tp, dev_fp, dev_fn = corpus_result
                 sys.stderr.write("[dev epoch=%d] loss = %.6f "
                                  "p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f"
-                                 % (epoch, devloss/devtagged,
+                                 % (epoch, devloss / devtagged,
                                     dev_p, dev_tp, dev_tp + dev_fp,
                                     dev_r, dev_tp, dev_tp + dev_fn,
                                     dev_f1))
@@ -410,14 +409,14 @@ elif options.mode == "test":
     for test_ex in combined_dev:
         _, predicted = identify_targets(builders, test_ex.tokens, test_ex.postags, test_ex.lemmas)
 
-        tp_fp_fn = evaluate_example_targetid(test_ex.targetframedict.keys(), predicted)
+        tp_fp_fn = evaluate_example_targetid(list(test_ex.targetframedict.keys()), predicted)
         corpus_tp_fp_fn = np.add(corpus_tp_fp_fn, tp_fp_fn)
 
         test_predictions.append(predicted)
 
     test_tp, test_fp, test_fn = corpus_tp_fp_fn
     test_prec, test_rec, test_f1 = calc_f(corpus_tp_fp_fn)
-    sys.stderr.write("[test] p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f\n" %(
+    sys.stderr.write("[test] p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f\n" % (
         test_prec, test_tp, test_tp + test_fp,
         test_rec, test_tp, test_tp + test_fn,
         test_f1))

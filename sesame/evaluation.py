@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import time
-from dataio import *
-from itertools import izip
+from .dataio import *
+
 
 def calc_f(scores):
     tp, fp, fn = scores
@@ -20,6 +20,7 @@ def calc_f(scores):
         f = 2.0 * pr * re / (pr + re)
     return pr, re, f
 
+
 def evaluate_example_targetid(goldtargets, prediction):
     """ (Unlabeled) target evaluation.
     """
@@ -33,6 +34,7 @@ def evaluate_example_targetid(goldtargets, prediction):
         if pred_target not in goldtargets:
             fp += 1
     return [tp, fp, fn]
+
 
 def evaluate_labeled_example_targetid(goldtargets, prediction):
     """ Labeled lexical unit evaluation.
@@ -49,9 +51,10 @@ def evaluate_labeled_example_targetid(goldtargets, prediction):
             fp += 1
     return [tp, fp, fn]
 
+
 def evaluate_example_frameid(goldframe, prediction):
     tp = fp = fn = 0.0
-    predframe = prediction.items()[0][1][1]
+    predframe = list(prediction.items())[0][1][1]
 
     if predframe == goldframe:
         tp += 1
@@ -59,6 +62,7 @@ def evaluate_example_frameid(goldframe, prediction):
         fp += 1
         fn += 1
     return [tp, fp, fn]
+
 
 def unlabeled_eval(goldfes, predargmax, notanfeid):
     utp = ufp = ufn = 0.0
@@ -84,7 +88,8 @@ def unlabeled_eval(goldfes, predargmax, notanfeid):
         if s not in goldspans:
             ufp += 1
 
-    return utp,ufp,ufn
+    return utp, ufp, ufn
+
 
 def labeled_eval(corefes, goldfes, predargmax, notanfeid):
     def score(fe_id):
@@ -116,22 +121,23 @@ def labeled_eval(corefes, goldfes, predargmax, notanfeid):
 
     return ltp, lfp, lfn
 
+
 def token_level_eval(sentlen, goldfes, predargmax, notanfeid):
-    goldtoks = [0 for _ in xrange(sentlen)]
+    goldtoks = [0 for _ in range(sentlen)]
     for feid in goldfes:
         for span in goldfes[feid]:
-            for s in xrange(span[0], span[1]+1):
+            for s in range(span[0], span[1] + 1):
                 goldtoks[s] = feid
 
-    predtoks = [0 for _ in xrange(sentlen)]
+    predtoks = [0 for _ in range(sentlen)]
     for feid in predargmax:
         for span in predargmax[feid]:
-            for s in xrange(span[0], span[1]+1):
+            for s in range(span[0], span[1] + 1):
                 predtoks[s] = feid
 
     # token-level F1
     wtp = wfp = wfn = 0.0
-    for i in xrange(sentlen):
+    for i in range(sentlen):
         if goldtoks[i] == predtoks[i]:
             if goldtoks[i] != notanfeid:
                 wtp += 1
@@ -145,12 +151,14 @@ def token_level_eval(sentlen, goldfes, predargmax, notanfeid):
 
     return wtp, wfp, wfn
 
+
 def evaluate_example_argid(goldfes, predargmax, corefes, sentlen, notanfeid=None):
     utp, ufp, ufn = unlabeled_eval(goldfes, predargmax, notanfeid)
     ltp, lfp, lfn = labeled_eval(corefes, goldfes, predargmax, notanfeid)
     wtp, wfp, wfn = token_level_eval(sentlen, goldfes, predargmax, notanfeid)
 
     return [utp, ufp, ufn], [ltp, lfp, lfn], [wtp, wfp, wfn]
+
 
 def evaluate_corpus_argid(goldex, predictions, corefrmfemap, notanfeid, logger):
     ures = labldres = tokres = [0.0, 0.0, 0.0]
@@ -161,19 +169,19 @@ def evaluate_corpus_argid(goldex, predictions, corefrmfemap, notanfeid, logger):
     logger.write("Sent#%d :\n" % sn)
     goldex[0].print_internal_sent(logger)
 
-    for testex, tpred in izip(goldex, predictions):
+    for testex, tpred in zip(goldex, predictions):
         sentnum = testex.sent_num
         if sentnum != sn:
             lp, lr, lf = calc_f(sl)
             logger.write("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
-                  "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
-                  "\n-----------------------------\n"
-                  % (sl[0], sl[0]+sl[1], sl[0]+sl[-1],
-                     sn,
-                     lr, sl[0], sl[-1] + sl[0],
-                     lp, sl[0], sl[1] + sl[0],
-                     lf))
-            sl = [0.0,0.0,0.0]
+                         "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
+                         "\n-----------------------------\n"
+                         % (sl[0], sl[0] + sl[1], sl[0] + sl[-1],
+                            sn,
+                            lr, sl[0], sl[-1] + sl[0],
+                            lp, sl[0], sl[1] + sl[0],
+                            lf))
+            sl = [0.0, 0.0, 0.0]
             sn = sentnum
             logger.write("Sent#%d :\n" % sentnum)
             testex.print_internal_sent(logger)
@@ -196,18 +204,18 @@ def evaluate_corpus_argid(goldex, predictions, corefrmfemap, notanfeid, logger):
         tokres = np.add(tokres, t)
 
         sl = np.add(sl, l)
-        logger.write("{} / {} / {}\n".format(l[0], l[0]+l[1], l[0]+l[-1]))
+        logger.write("{} / {} / {}\n".format(l[0], l[0] + l[1], l[0] + l[-1]))
 
     # last sentence
     lp, lr, lf = calc_f(sl)
     logger.write("\t\t\t\t\t\t\t\t\tTotal: %.1f / %.1f / %.1f\n"
-          "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
-          "\n-----------------------------\n"
-          % (sl[0], sl[0]+sl[1], sl[0]+sl[-1],
-             sentnum,
-             lr, sl[0], sl[-1] + sl[0],
-             lp, sl[0], sl[1] + sl[0],
-             lf))
+                 "Sentence ID=%d: Recall=%.5f (%.1f/%.1f) Precision=%.5f (%.1f/%.1f) Fscore=%.5f"
+                 "\n-----------------------------\n"
+                 % (sl[0], sl[0] + sl[1], sl[0] + sl[-1],
+                    sentnum,
+                    lr, sl[0], sl[-1] + sl[0],
+                    lp, sl[0], sl[1] + sl[0],
+                    lf))
 
     up, ur, uf = calc_f(ures)
     lp, lr, lf = calc_f(labldres)
@@ -243,12 +251,12 @@ if __name__ == "__main__":
                      "[test] lpr = %.5f (%6.1f/%6.1f) lre = %.5f (%6.1f/%6.1f) lf1 = %.5f "
                      "[took %.3f s]\n"
                      % (corp_wp, corp_tokres[0], corp_tokres[1] + corp_tokres[0],
-                     corp_wr, corp_tokres[0], corp_tokres[-1] + corp_tokres[0],
-                     corp_wf,
-                     corp_up, corp_ures[0], corp_ures[1] + corp_ures[0],
-                     corp_ur, corp_ures[0], corp_ures[-1] + corp_ures[0],
-                     corp_uf,
-                     corp_lp, corp_labldres[0], corp_labldres[1] + corp_labldres[0],
-                     corp_lr, corp_labldres[0], corp_labldres[-1] + corp_labldres[0],
-                     corp_lf,
-                     time.time()-eval_start_time))
+                        corp_wr, corp_tokres[0], corp_tokres[-1] + corp_tokres[0],
+                        corp_wf,
+                        corp_up, corp_ures[0], corp_ures[1] + corp_ures[0],
+                        corp_ur, corp_ures[0], corp_ures[-1] + corp_ures[0],
+                        corp_uf,
+                        corp_lp, corp_labldres[0], corp_labldres[1] + corp_labldres[0],
+                        corp_lr, corp_labldres[0], corp_labldres[-1] + corp_labldres[0],
+                        corp_lf,
+                        time.time() - eval_start_time))

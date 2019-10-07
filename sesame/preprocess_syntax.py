@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import codecs
-from itertools import izip
+
 import sys
 
 
@@ -9,7 +9,7 @@ def join_fnconll_parseyconll(conllfile, synfile, outfile):
     with codecs.open(outfile, "w", "utf-8") as outf:
         with codecs.open(conllfile, "r", "utf-8") as cf:
             with codecs.open(synfile, "r", "utf-8") as sf:
-                for l,sl in izip(cf,sf):
+                for l,sl in zip(cf,sf):
 
                     cfields = l.strip().split("\t")
                     if len(cfields) == 1:

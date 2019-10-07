@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from globalconfig import *
+from .globalconfig import *
 import random
 import sys
 
@@ -59,7 +59,7 @@ class FspDict:
             raise Exception("not in dictionary", itemid)
 
     def printdict(self):
-        print sorted(self._strtoint.keys())
+        print(sorted(self._strtoint.keys()))
 
     def size(self):
         if not self._locked:
@@ -123,7 +123,7 @@ def extract_spans(indices):
     """
     indices.sort()
     spans = [(indices[0], indices[0])]
-    for i in xrange(1, len(indices)):
+    for i in range(1, len(indices)):
         if indices[i] == indices[i - 1] + 1:
             o = spans.pop()
             spans.append((o[0], indices[i]))
@@ -174,7 +174,7 @@ def filter_long_ex(dataset, use_span_clip, allowed_spanlen, notanfeid):
 
 def clip_long_spans(spans, maxspanlen):
     faultyspans = []
-    for i in xrange(len(spans)):
+    for i in range(len(spans)):
         span = spans[i]
         spanlen = span[1] - span[0] + 1
         if spanlen <= maxspanlen:
@@ -189,7 +189,7 @@ def clip_long_spans(spans, maxspanlen):
         numbreaks = spanlen / maxspanlen
         newspans = []
         spanbeg = span[0]
-        for _ in xrange(numbreaks):
+        for _ in range(numbreaks):
             newspans.append((spanbeg, spanbeg + maxspanlen - 1))
             spanbeg += maxspanlen
         if spanlen % maxspanlen != 0:

@@ -2,8 +2,8 @@
 import nltk
 lemmatizer = nltk.stem.WordNetLemmatizer()
 
-from conll09 import CoNLL09Element, CoNLL09Example
-from sentence import Sentence
+from .conll09 import CoNLL09Element, CoNLL09Example
+from .sentence import Sentence
 
 
 def make_data_instance(text, index):
