@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-from .globalconfig import *
+from __future__ import division
+
 import random
-import sys
+
+from .globalconfig import *
 
 
 class FspDict:
@@ -186,7 +188,7 @@ def clip_long_spans(spans, maxspanlen):
     # print ranges
     for span in faultyspans:
         spanlen = span[1] - span[0] + 1
-        numbreaks = spanlen / maxspanlen
+        numbreaks = spanlen // maxspanlen
         newspans = []
         spanbeg = span[0]
         for _ in range(numbreaks):

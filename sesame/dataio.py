@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import division
+
 import codecs
 import os
 import xml.etree.ElementTree as et
