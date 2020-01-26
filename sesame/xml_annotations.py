@@ -2,7 +2,7 @@
 import nltk
 import sys
 
-from globalconfig import EMPTY_LABEL
+from .globalconfig import EMPTY_LABEL
 
 lemmatizer = nltk.stem.WordNetLemmatizer()
 
@@ -53,15 +53,15 @@ class SentenceAnnotation(object):
             idx += 1
         try:
             self.nltkpostags = [ele[1] for ele in nltk.pos_tag(self.tokens)]
-            for idx in xrange(len(self.tokens)):
+            for idx in range(len(self.tokens)):
                 tok = self.tokens[idx]
                 if self.nltkpostags[idx].startswith("V"):
                     self.nltklemmas.append(lemmatizer.lemmatize(tok, pos='v'))
                 else:
                     self.nltklemmas.append(lemmatizer.lemmatize(tok))
         except IndexError:
-            print self.tokens
-            print nltk.pos_tag(self.tokens)
+            print(self.tokens)
+            print(nltk.pos_tag(self.tokens))
         return True
 
     def get_tokens_by_offset(self, startend):
@@ -107,7 +107,7 @@ class FrameAnnotation(object):
             logger.write("\t\tIssue: broken tokenization for FE\n")
             return
         self.foundfes = True
-        for idx in xrange(st, en + 1):
+        for idx in range(st, en + 1):
             if idx in self.fe:
                 raise Exception("\t\tIssue: duplicate FE at ", idx, self.fe)
 
@@ -116,7 +116,7 @@ class FrameAnnotation(object):
             self.fe[st] = "S-" + arglabel
         else:
             self.fe[st] = "B-" + arglabel
-            for idx in xrange(st+1, en+1):
+            for idx in range(st+1, en+1):
                 if idx in self.fe:
                     raise Exception("duplicate FE at ", idx, offset, arglabel)
                 self.fe[idx] = "I-" + arglabel
@@ -129,7 +129,7 @@ class FrameAnnotation(object):
             logger.write("\t\tIssue: broken tokenization for target\n")
             return
         self.foundtarget = True
-        for idx in xrange(st, en + 1):
+        for idx in range(st, en + 1):
             if idx in self.target:
                 logger.write("\t\tIssue: duplicate target at " + str(idx) + "\n")
             self.target.add(idx)

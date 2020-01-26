@@ -51,7 +51,7 @@ def write_to_conll(outf, fsp, firstex, sentid):
         mode = "w"
 
     with codecs.open(outf, mode, "utf-8") as outf:
-        for i in xrange(fsp.sent.size()):
+        for i in range(fsp.sent.size()):
             token, postag, nltkpostag, nltklemma, lu, frm, role = fsp.info_at_idx(i)
 
             outf.write(str(i+1) + "\t") # ID = 0
@@ -224,7 +224,7 @@ def get_annoids(filelist, outf, outsentf):
             if len(fsps) == 0: invalidsents += 1
             if sentann.text in sents:
                 repeated += 1
-            for fsp in fsps.values():
+            for fsp in list(fsps.values()):
                 sents.add(sentann.text)
                 write_to_conll(outf, fsp, isfirstex, numsents)
                 sizes[outf] += 1

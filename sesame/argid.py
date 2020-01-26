@@ -7,10 +7,10 @@ import time
 from dynet import *
 from optparse import OptionParser
 
-from evaluation import *
-from discrete_argid_feats import ArgPosition, OutHeads, SpanWidth
-from raw_data import make_data_instance
-from semafor_evaluation import convert_conll_to_frame_elements
+from .evaluation import *
+from .discrete_argid_feats import ArgPosition, OutHeads, SpanWidth
+from .raw_data import make_data_instance
+from .semafor_evaluation import convert_conll_to_frame_elements
 
 
 optpr = OptionParser()
@@ -81,7 +81,7 @@ frmfemap[FRAMEDICT.getid("Removing")].append(FEDICT.getid("Frequency"))
 
 if USE_WV:
     wvs = get_wvec_map()
-    PRETDIM = len(wvs.values()[0])
+    PRETDIM = len(list(wvs.values())[0])
 
 if USE_HIER:
     frmrelmap, feparents = read_frame_relations()
@@ -318,17 +318,17 @@ def get_base_embeddings(trainmode, unkdtokens, tg_start, sentence):
     else:
         emb_x = [v_x[tok] for tok in unkdtokens]
     pos_x = [p_x[pos] for pos in sentence.postags]
-    dist_x = [scalarInput(i - tg_start + 1) for i in xrange(sentlen)]
+    dist_x = [scalarInput(i - tg_start + 1) for i in range(sentlen)]
 
-    baseinp_x = [(w_i * concatenate([emb_x[j], pos_x[j], dist_x[j]]) + b_i) for j in xrange(sentlen)]
+    baseinp_x = [(w_i * concatenate([emb_x[j], pos_x[j], dist_x[j]]) + b_i) for j in range(sentlen)]
 
     if USE_WV:
-        for j in xrange(sentlen):
+        for j in range(sentlen):
             if unkdtokens[j] in wvs:
                 nonupdatedwv = nobackprop(e_x[unkdtokens[j]])
                 baseinp_x[j] = baseinp_x[j] + w_e * nonupdatedwv + b_e
 
-    embposdist_x = [rectify(baseinp_x[j]) for j in xrange(sentlen)]
+    embposdist_x = [rectify(baseinp_x[j]) for j in range(sentlen)]
 
     if USE_DROPOUT:
         basefwdlstm.set_dropout(DROPOUT_RATE)
@@ -338,14 +338,14 @@ def get_base_embeddings(trainmode, unkdtokens, tg_start, sentence):
     brinit = baserevlstm.initial_state()
     baserev = brinit.transduce(reversed(embposdist_x))
     basebi_x = [rectify(w_bi * concatenate([basefwd[eidx], baserev[sentlen - eidx - 1]]) +
-                    b_bi) for eidx in xrange(sentlen)]
+                    b_bi) for eidx in range(sentlen)]
 
     if USE_DEPS:
         dhead_x = [embposdist_x[dephead] for dephead in sentence.depheads]
         dheadp_x = [pos_x[dephead] for dephead in sentence.depheads]
         drel_x = [dr_x[deprel] for deprel in sentence.deprels]
         baseinp_x = [rectify(w_di * concatenate([dhead_x[j], dheadp_x[j], drel_x[j], basebi_x[j]]) +
-                        b_di) for j in xrange(sentlen)]
+                        b_di) for j in range(sentlen)]
         basebi_x = baseinp_x
 
     return basebi_x
@@ -362,7 +362,7 @@ def get_target_frame_embeddings(embposdist_x, tfdict):
     target_x = tginit.transduce(embposdist_x[tg_start: tg_start + len(tfkeys) + 1])[-1]
 
     # Adding context features
-    ctxt = range(tg_start - 1, tfkeys[-1] + 2)
+    ctxt = list(range(tg_start - 1, tfkeys[-1] + 2))
     if ctxt[0] < 0: ctxt = ctxt[1:]
     if ctxt[-1] > sentlen: ctxt = ctxt[:-1]
     c_init = ctxtlstm.initial_state()
@@ -383,14 +383,14 @@ def get_target_frame_embeddings(embposdist_x, tfdict):
 
 def get_span_embeddings(embpos_x):
     sentlen = len(embpos_x)
-    fws = [[None for _ in xrange(sentlen)] for _ in xrange(sentlen)]
-    bws = [[None for _ in xrange(sentlen)] for _ in xrange(sentlen)]
+    fws = [[None for _ in range(sentlen)] for _ in range(sentlen)]
+    bws = [[None for _ in range(sentlen)] for _ in range(sentlen)]
 
     if USE_DROPOUT:
         builders[0].set_dropout(DROPOUT_RATE)
         builders[1].set_dropout(DROPOUT_RATE)
 
-    for i in xrange(sentlen):
+    for i in range(sentlen):
         fw_init = builders[0].initial_state()
         tmpfws = fw_init.transduce(embpos_x[i:])
         if len(tmpfws) != sentlen - i:
@@ -398,7 +398,7 @@ def get_span_embeddings(embpos_x):
 
         spanend = sentlen
         if USE_SPAN_CLIP: spanend = min(sentlen, i + ALLOWED_SPANLEN + 1)
-        for j in xrange(i, spanend):
+        for j in range(i, spanend):
             # for j in xrange(i, sentlen):
             fws[i][j] = tmpfws[j - i]
 
@@ -409,7 +409,7 @@ def get_span_embeddings(embpos_x):
         spansize = i + 1
         if USE_SPAN_CLIP and spansize - 1 > ALLOWED_SPANLEN:
             spansize = ALLOWED_SPANLEN + 1
-        for k in xrange(spansize):
+        for k in range(spansize):
             bws[i - k][i] = tmpbws[k]
 
     return fws, bws
@@ -458,10 +458,10 @@ def get_factor_expressions(fws, bws, tfemb, tfdict, valid_fes, sentence, spaths_
     sortedtfd = sorted(tfdict.keys())
     targetspan = (sortedtfd[0], sortedtfd[-1])
 
-    for j in xrange(sentlen):
+    for j in range(sentlen):
         istart = 0
         if USE_SPAN_CLIP and j > ALLOWED_SPANLEN: istart = max(0, j - ALLOWED_SPANLEN)
-        for i in xrange(istart, j + 1):
+        for i in range(istart, j + 1):
 
             spanlen = scalarInput(j - i + 1)
             logspanlen = scalarInput(math.log(j - i + 1))
@@ -494,7 +494,7 @@ def get_factor_expressions(fws, bws, tfemb, tfdict, valid_fes, sentence, spaths_
 
 def denominator_check(n, k):
     ssum = [k]
-    for _ in xrange(1, n):
+    for _ in range(1, n):
         ssum.append(sum(ssum) * k + k)
     return ssum
 
@@ -534,9 +534,9 @@ def cost(factor, goldfactors):
 
 
 def get_logloss_partition(factorexprs, valid_fes, sentlen):
-    logalpha = [None for _ in xrange(sentlen)]
+    logalpha = [None for _ in range(sentlen)]
     # ssum = lossformula(sentlen, len(valid_fes))
-    for j in xrange(sentlen):
+    for j in range(sentlen):
         # full length spans
         spanscores = []
         if not USE_SPAN_CLIP or j <= ALLOWED_SPANLEN:
@@ -545,7 +545,7 @@ def get_logloss_partition(factorexprs, valid_fes, sentlen):
         # recursive case
         istart = 0
         if USE_SPAN_CLIP and j > ALLOWED_SPANLEN: istart = max(0, j - ALLOWED_SPANLEN - 1)
-        for i in xrange(istart, j):
+        for i in range(istart, j):
             facscores = [logalpha[i] + factorexprs[Factor(i + 1, j, y)] for y in valid_fes]
             spanscores.extend(facscores)
 
@@ -557,8 +557,8 @@ def get_logloss_partition(factorexprs, valid_fes, sentlen):
 
 
 def get_softmax_margin_partition(factorexprs, goldfactors, valid_fes, sentlen):
-    logalpha = [None for _ in xrange(sentlen)]
-    for j in xrange(sentlen):
+    logalpha = [None for _ in range(sentlen)]
+    for j in range(sentlen):
         # full length spans
         spanscores = []
         if not USE_SPAN_CLIP or j <= ALLOWED_SPANLEN:
@@ -568,7 +568,7 @@ def get_softmax_margin_partition(factorexprs, goldfactors, valid_fes, sentlen):
         # recursive case
         istart = 0
         if USE_SPAN_CLIP and j > ALLOWED_SPANLEN: istart = max(0, j - ALLOWED_SPANLEN - 1)
-        for i in xrange(istart, j):
+        for i in range(istart, j):
             facscores = [logalpha[i]
                          + factorexprs[Factor(i + 1, j, y)]
                          + cost(Factor(i + 1, j, y), goldfactors) for y in valid_fes]
@@ -582,10 +582,10 @@ def get_softmax_margin_partition(factorexprs, goldfactors, valid_fes, sentlen):
 
 
 def get_hinge_partition(factorexprs, goldfacs, valid_fes, sentlen):
-    alpha = [None for _ in xrange(sentlen)]
-    backpointers = [None for _ in xrange(sentlen)]
+    alpha = [None for _ in range(sentlen)]
+    backpointers = [None for _ in range(sentlen)]
 
-    for j in xrange(sentlen):
+    for j in range(sentlen):
         # full length spans
         bestscore = float("-inf")
         if not USE_SPAN_CLIP or j <= ALLOWED_SPANLEN:
@@ -600,7 +600,7 @@ def get_hinge_partition(factorexprs, goldfacs, valid_fes, sentlen):
         # recursive case
         istart = 0
         if USE_SPAN_CLIP and j > ALLOWED_SPANLEN: istart = max(0, j - ALLOWED_SPANLEN - 1)
-        for i in xrange(istart, j):
+        for i in range(istart, j):
             for y in valid_fes:
                 factor = Factor(i + 1, j, y)
                 facscore = alpha[i] + factorexprs[factor] + cost(factor, goldfacs)
@@ -651,10 +651,10 @@ def get_constit_loss(fws, bws, goldspans):
     losses = []
     sentlen = len(fws)
 
-    for j in xrange(sentlen):
+    for j in range(sentlen):
         istart = 0
         if USE_SPAN_CLIP and j > ALLOWED_SPANLEN: istart = max(0, j - ALLOWED_SPANLEN)
-        for i in xrange(istart, j + 1):
+        for i in range(istart, j + 1):
             constit_ij = w_c * rectify(w_fb * concatenate([fws[i][j], bws[i][j]]) + b_fb) + b_c
             logloss = log_softmax(constit_ij)
 
@@ -694,13 +694,13 @@ def get_loss(factorexprs, gold_fes, valid_fes, sentlen):
             gsum += factorexprs[fac].scalar_value()
             sys.stderr.write(fac.to_str(FEDICT) + " " + str(factorexprs[fac].scalar_value()) + "\n")
         sys.stderr.write("my calculation = " + str(gsum) + " vs " + str(numerator.scalar_value()) + "\n")
-        for j in xrange(sentlen):
+        for j in range(sentlen):
             sys.stderr.write(":" + str(j) + "\t")
             if not USE_SPAN_CLIP or j <= ALLOWED_SPANLEN:
                 sys.stderr.write("0 ")
             istart = 0
             if USE_SPAN_CLIP and j > ALLOWED_SPANLEN: istart = max(0, j - ALLOWED_SPANLEN - 1)
-            for i in xrange(istart, j):
+            for i in range(istart, j):
                 sys.stderr.write(str(i + 1) + " ")
             sys.stderr.write("\n")
         raise Exception("negative probability! probably overcounting spans?",
@@ -711,12 +711,12 @@ def get_loss(factorexprs, gold_fes, valid_fes, sentlen):
 
 
 def decode(factexprscalars, sentlen, valid_fes):
-    alpha = [None for _ in xrange(sentlen)]
-    backpointers = [None for _ in xrange(sentlen)]
+    alpha = [None for _ in range(sentlen)]
+    backpointers = [None for _ in range(sentlen)]
     if USE_DROPOUT:
         raise Exception("incorrect usage of dropout, turn off!\n")
 
-    for j in xrange(sentlen):
+    for j in range(sentlen):
         if USE_SPAN_CLIP and j > ALLOWED_SPANLEN: continue
         bestscore = float("-inf")
         bestlabel = None
@@ -729,7 +729,7 @@ def decode(factexprscalars, sentlen, valid_fes):
         alpha[j] = bestscore
         backpointers[j] = (0, bestlabel)
 
-    for j in xrange(sentlen):
+    for j in range(sentlen):
         bestscore = float("-inf")
         bestbeg = bestlabel = None
         if alpha[j] is not None:
@@ -738,7 +738,7 @@ def decode(factexprscalars, sentlen, valid_fes):
 
         istart = 0
         if USE_SPAN_CLIP and j > ALLOWED_SPANLEN: istart = max(0, j - ALLOWED_SPANLEN - 1)
-        for i in xrange(istart, j):
+        for i in range(istart, j):
             for y in valid_fes:
                 fac = Factor(i + 1, j, y)
                 facscore = math.exp(factexprscalars[fac])
@@ -900,7 +900,7 @@ if options.mode in ["train", "refresh"]:
         trainexamples = trainexamples + ptbexamples
 
     starttime = time.time()
-    for epoch in xrange(NUMEPOCHS):
+    for epoch in range(NUMEPOCHS):
         random.shuffle(trainexamples)
 
         for idx, trex in enumerate(trainexamples, 1):
@@ -916,7 +916,7 @@ if options.mode in ["train", "refresh"]:
             if USE_PTB_CONSTITS and type(trex) == Sentence:  # a PTB example
                 trexloss, taggedinex = identify_spans(unkedtoks,
                                                       trex,
-                                                      trex.constitspans.keys())
+                                                      list(trex.constitspans.keys()))
             else:  # an FN example
                 trexloss, taggedinex = identify_fes(unkedtoks,
                                                     trex.sentence,
@@ -976,7 +976,7 @@ if options.mode in ["train", "refresh"]:
         loss = 0.0
 
 elif options.mode == "ensemble":
-    exfs = {x: {} for x in xrange(len(devexamples))}
+    exfs = {x: {} for x in range(len(devexamples))}
     USE_DROPOUT = False
 
     sys.stderr.write("reading ensemble factors...")

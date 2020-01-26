@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import codecs
-import globalconfig as gc
+from . import globalconfig as gc
 import sys
 
 def read_sents(sent_file):
@@ -10,7 +10,7 @@ def read_sents(sent_file):
             words = line.strip().split()
             sentences.append(words)
         sentf.close()
-    print "number of sentences", len(sentences)
+    print("number of sentences", len(sentences))
     return sentences
 
 def read_fe_file(fe_file):
@@ -31,15 +31,15 @@ def read_fe_file(fe_file):
                 tfdict = frames[sentnum]
             for tp in targetpos:
                 if int(tp) in tfdict:
-                    print "repetition!!!", tfdict, sentnum, "repeated target =", tp, (fields[3],fields[4])
+                    print("repetition!!!", tfdict, sentnum, "repeated target =", tp, (fields[3],fields[4]))
                     tfdict1[int(tp)] = (fields[3],fields[4])
                     sent1 = sentnum
                     continue
                 tfdict[int(tp)] = (fields[3],fields[4])
             frames[sentnum]= tfdict
             numframes += int(len(targetpos) > 0)
-        print "number of annotated sentences", len(frames)
-        print "number of FSPs", numframes
+        print("number of annotated sentences", len(frames))
+        print("number of FSPs", numframes)
         fef.close()
     return frames, tfdict1, sent1
 
@@ -85,8 +85,8 @@ def write_tab_separated(sents, frames, tfdict1, sent1):
     '''
     with codecs.open("roth"+str(len(sents)), "w", "utf-8") as outf:
 
-        for i in xrange(len(sents)):
-            for j in xrange(len(sents[i])):
+        for i in range(len(sents)):
+            for j in range(len(sents[i])):
                 outf.write(str(j+1) + "\t")
                 outf.write(sents[i][j] + "\t")
                 if i in frames and j in frames[i]:
@@ -96,7 +96,7 @@ def write_tab_separated(sents, frames, tfdict1, sent1):
                 outf.write("\n")
             outf.write("\n")
             if i == sent1:
-                for j in xrange(len(sents[i])):
+                for j in range(len(sents[i])):
                     outf.write(str(j+1) + "\t")
                     outf.write(sents[i][j] + "\t")
                     if j in tfdict1:

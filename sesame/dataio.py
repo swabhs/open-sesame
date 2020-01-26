@@ -7,9 +7,9 @@ import xml.etree.ElementTree as et
 
 from nltk.corpus import BracketParseCorpusReader
 
-from conll09 import *
-from globalconfig import *
-from sentence import *
+from .conll09 import *
+from .globalconfig import *
+from .sentence import *
 
 
 def read_conll(conll_file, syn_type=None):
@@ -345,7 +345,7 @@ def read_frame_relations():
 
     f.close()
 
-    for leaf in relations.keys():
+    for leaf in list(relations.keys()):
         if leaf not in paths:
             paths[leaf] = []
         paths[leaf] += get_chains(leaf, relations, [])

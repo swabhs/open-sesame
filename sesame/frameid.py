@@ -6,9 +6,9 @@ import time
 from optparse import OptionParser
 
 from dynet import *
-from evaluation import *
-from raw_data import make_data_instance
-from semafor_evaluation import convert_conll_to_frame_elements
+from .evaluation import *
+from .raw_data import make_data_instance
+from .semafor_evaluation import convert_conll_to_frame_elements
 
 
 optpr = OptionParser()
@@ -65,7 +65,7 @@ post_train_lock_dicts()
 lufrmmap, relatedlus = read_related_lus()
 if USE_WV:
     pretrained_embeddings_map = get_wvec_map()
-    PRETRAINED_DIM = len(pretrained_embeddings_map.values()[0])
+    PRETRAINED_DIM = len(list(pretrained_embeddings_map.values())[0])
 
 lock_dicts()
 UNKTOKEN = VOCDICT.getid(UNK)
@@ -198,7 +198,7 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
     pos_x = [p_x[pos] for pos in postags]
 
     emb2_xi = []
-    for i in xrange(sentlen + 1):
+    for i in range(sentlen + 1):
         if tokens[i] in pretrained_embeddings_map:
             # If update set to False, prevents pretrained embeddings from being updated.
             emb_without_backprop = lookup(e_x, tokens[i], update=True)
@@ -207,7 +207,7 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
             features_at_i = concatenate([emb_x[i], pos_x[i], u_x])
         emb2_xi.append(w_e * features_at_i + b_e)
 
-    emb2_x = [rectify(emb2_xi[i]) for i in xrange(sentlen+1)]
+    emb2_x = [rectify(emb2_xi[i]) for i in range(sentlen+1)]
 
     # initializing the two LSTMs
     if USE_DROPOUT and trainmode:
@@ -276,7 +276,7 @@ if options.mode in ["train", "refresh"]:
     loss = 0.0
     last_updated_epoch = 0
 
-    for epoch in xrange(NUM_EPOCHS):
+    for epoch in range(NUM_EPOCHS):
         random.shuffle(trainexamples)
         for idx, trex in enumerate(trainexamples, 1):
             if idx % EVAL_EVERY_EPOCH == 0:
@@ -287,7 +287,7 @@ if options.mode in ["train", "refresh"]:
             unk_replace_tokens(trex.tokens, inptoks, VOCDICT, UNK_PROB, UNKTOKEN)
 
             trexloss,_ = identify_frames(
-                builders, inptoks, trex.postags, trex.lu, trex.targetframedict.keys(), trex.frame)
+                builders, inptoks, trex.postags, trex.lu, list(trex.targetframedict.keys()), trex.frame)
 
             if trexloss is not None:
                 loss += trexloss.scalar_value()
@@ -301,7 +301,7 @@ if options.mode in ["train", "refresh"]:
                 for devex in devexamples:
                     devludict = devex.get_only_targets()
                     dl, predicted = identify_frames(
-                        builders, devex.tokens, devex.postags, devex.lu, devex.targetframedict.keys())
+                        builders, devex.tokens, devex.postags, devex.lu, list(devex.targetframedict.keys()))
                     if dl is not None:
                         devloss += dl.scalar_value()
                     predictions.append(predicted)
@@ -344,7 +344,7 @@ elif options.mode == "test":
     devexamples[0].print_internal_sent(logger)
 
     for testex in devexamples:
-        _, predicted = identify_frames(builders, testex.tokens, testex.postags, testex.lu, testex.targetframedict.keys())
+        _, predicted = identify_frames(builders, testex.tokens, testex.postags, testex.lu, list(testex.targetframedict.keys()))
 
         tpfpfn = evaluate_example_frameid(testex.frame, predicted)
         corpus_tpfpfn = np.add(corpus_tpfpfn, tpfpfn)
@@ -408,7 +408,7 @@ elif options.mode == "predict":
 
     predictions = []
     for instance in instances:
-        _, prediction = identify_frames(builders, instance.tokens, instance.postags, instance.lu, instance.targetframedict.keys())
+        _, prediction = identify_frames(builders, instance.tokens, instance.postags, instance.lu, list(instance.targetframedict.keys()))
         predictions.append(prediction)
     sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
     print_as_conll(instances, predictions)

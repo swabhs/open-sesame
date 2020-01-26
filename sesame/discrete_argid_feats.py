@@ -2,7 +2,7 @@
 
 
 class ArgPosition(object):
-    BEFORE, AFTER, OVERLAP, WITHIN = range(4)
+    BEFORE, AFTER, OVERLAP, WITHIN = list(range(4))
 
     @staticmethod
     def size():
@@ -20,7 +20,7 @@ class ArgPosition(object):
 
 
 class SpanWidth(object):
-    one, two, threefive, fiveten, tenfifteen, fifteentwenty, evenmore = range(7)
+    one, two, threefive, fiveten, tenfifteen, fifteentwenty, evenmore = list(range(7))
 
     @staticmethod
     def size():
@@ -45,7 +45,7 @@ class SpanWidth(object):
 
 
 class OutHeads(object):
-    zero, one, two, three, four, five, btwn610, btwn1115, morethan15 = range(9)
+    zero, one, two, three, four, five, btwn610, btwn1115, morethan15 = list(range(9))
 
     @staticmethod
     def size():

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import time
-from dataio import *
-from itertools import izip
+from .dataio import *
+
 
 def calc_f(scores):
     tp, fp, fn = scores
@@ -51,7 +51,7 @@ def evaluate_labeled_example_targetid(goldtargets, prediction):
 
 def evaluate_example_frameid(goldframe, prediction):
     tp = fp = fn = 0.0
-    predframe = prediction.items()[0][1][1]
+    predframe = list(prediction.items())[0][1][1]
 
     if predframe == goldframe:
         tp += 1
@@ -117,21 +117,21 @@ def labeled_eval(corefes, goldfes, predargmax, notanfeid):
     return ltp, lfp, lfn
 
 def token_level_eval(sentlen, goldfes, predargmax, notanfeid):
-    goldtoks = [0 for _ in xrange(sentlen)]
+    goldtoks = [0 for _ in range(sentlen)]
     for feid in goldfes:
         for span in goldfes[feid]:
-            for s in xrange(span[0], span[1]+1):
+            for s in range(span[0], span[1]+1):
                 goldtoks[s] = feid
 
-    predtoks = [0 for _ in xrange(sentlen)]
+    predtoks = [0 for _ in range(sentlen)]
     for feid in predargmax:
         for span in predargmax[feid]:
-            for s in xrange(span[0], span[1]+1):
+            for s in range(span[0], span[1]+1):
                 predtoks[s] = feid
 
     # token-level F1
     wtp = wfp = wfn = 0.0
-    for i in xrange(sentlen):
+    for i in range(sentlen):
         if goldtoks[i] == predtoks[i]:
             if goldtoks[i] != notanfeid:
                 wtp += 1
@@ -161,7 +161,7 @@ def evaluate_corpus_argid(goldex, predictions, corefrmfemap, notanfeid, logger):
     logger.write("Sent#%d :\n" % sn)
     goldex[0].print_internal_sent(logger)
 
-    for testex, tpred in izip(goldex, predictions):
+    for testex, tpred in zip(goldex, predictions):
         sentnum = testex.sent_num
         if sentnum != sn:
             lp, lr, lf = calc_f(sl)
