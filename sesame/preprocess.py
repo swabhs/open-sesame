@@ -5,13 +5,11 @@ Reads XML files containing FrameNet 1.$VERSION annotations, and converts them to
 import codecs
 import os.path
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
 import xml.etree.ElementTree as et
 from optparse import OptionParser
 
-from globalconfig import *
-from xml_annotations import FrameAnnotation, SentenceAnnotation
+from sesame.globalconfig import *
+from sesame.xml_annotations import FrameAnnotation, SentenceAnnotation
 
 
 optpr = OptionParser()
