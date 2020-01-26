@@ -1,9 +1,15 @@
 # -*- coding: utf-8 -*-
 import json
-import sys
+import sys; import os
+import sesame
 
-config_json = open("configurations/global_config.json", "r")
-configuration = json.load(config_json)
+root = sesame.__file__
+root = os.path.split(root)[0]
+root = os.path.split(root)[0]
+
+with open(os.path.join(root,"configurations/global_config.json"), "r") as config_json:
+    configuration = json.load(config_json)
+
 for key in sorted(configuration):
     sys.stderr.write("{}:\t{}\n".format(key.upper(), configuration[key]))
 
@@ -94,4 +100,4 @@ BIO_INDEX_DICT = {
         "S": SINGULAR
 }
 
-INDEX_BIO_DICT = {index: tag for tag, index in BIO_INDEX_DICT.iteritems()}
+INDEX_BIO_DICT = {index: tag for tag, index in BIO_INDEX_DICT.items()}
