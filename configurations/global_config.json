@@ -1,6 +1,6 @@
 {
     "version": 1.7,
-    "data_directory": "data/",
-    "embeddings_file": "data/glove.6B.100d.txt",
+    "data_directory": "/ws/nbs/frame-sem-parse/open-sesame/data/",
+    "embeddings_file": "/ws/nbs/frame-sem-parse/open-sesame/data/glove.6B.100d.txt",
     "debug_mode": false
 }
