@@ -177,7 +177,7 @@ class CoNLL09Example(FrameSemParse):
                 field.lu = LUDICT.getid(EMPTY_LABEL)
                 field.lupos = LUPOSDICT.getid(EMPTY_LABEL)
                 field.frame = FRAMEDICT.getid(EMPTY_LABEL)
-            new_conll_str += field.get_str()
+            new_conll_str += str(field.get_str())
         return new_conll_str
 
     def get_predicted_target_conll(self, predicted_target, predicted_lu):
@@ -196,7 +196,7 @@ class CoNLL09Example(FrameSemParse):
                 field.lu = LUDICT.getid(EMPTY_LABEL)
                 field.lupos = LUPOSDICT.getid(EMPTY_LABEL)
             field.frame = FRAMEDICT.getid(EMPTY_LABEL)
-            new_conll_str += field.get_str(no_args=True)
+            new_conll_str += str(field.get_str(no_args=True))
         return new_conll_str
 
     def print_internal(self, logger):
