@@ -6,11 +6,11 @@ A frame-semantic parser for automatically detecting [FrameNet](https://framenet.
 
 ## Installation
 
-This project is developed using Python 2.7. Other requirements include the [DyNet](http://dynet.readthedocs.io/en/latest/python.html) library, and some [NLTK](https://www.nltk.org/) packages.
+This project is developed using Python 2.7. Other requirements include the [DyNet](http://dynet.readthedocs.io/en/latest/python.html) library, and some packages from an older version of [NLTK](https://www.nltk.org/).
 
 ```sh
 $ pip install dynet
-$ pip install nltk
+$ pip install nltk==3.3
 $ python -m nltk.downloader averaged_perceptron_tagger wordnet
 ```
 
