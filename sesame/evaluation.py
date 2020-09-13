@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import time
-from itertools import izip
 
 from .dataio import read_conll, read_frame_maps
 
@@ -162,7 +161,7 @@ def evaluate_corpus_argid(goldex, predictions, corefrmfemap, notanfeid, logger):
     logger.write("Sent#%d :\n" % sn)
     goldex[0].print_internal_sent(logger)
 
-    for testex, tpred in izip(goldex, predictions):
+    for testex, tpred in zip(goldex, predictions):
         sentnum = testex.sent_num
         if sentnum != sn:
             lp, lr, lf = calc_f(sl)

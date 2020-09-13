@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from itertools import izip
 from nltk.tree import ParentedTree
 
 
@@ -80,7 +79,7 @@ class Sentence(object):
         pathfrom = self.rootpath[src][::-1]
         pathto = self.rootpath[dest][::-1]
         i = 0
-        for n1, n2 in izip(pathfrom, pathto):
+        for n1, n2 in zip(pathfrom, pathto):
             if n1 == n2:
                 i += 1
                 continue
@@ -183,7 +182,7 @@ class Sentence(object):
         pathfrom = self.crootpaths[src.label()][::-1]
         pathto = self.crootpaths[dest.label()][::-1]
         common = 0
-        for n1, n2 in izip(pathfrom, pathto):
+        for n1, n2 in zip(pathfrom, pathto):
             if n1 == n2:
                 common += 1
                 continue
@@ -196,7 +195,7 @@ class Sentence(object):
         pathfrom = self.crootpaths[src.label()][::-1]
         pathto = self.crootpaths[dest.label()][::-1]
         common = 0
-        for n1, n2 in izip(pathfrom, pathto):
+        for n1, n2 in zip(pathfrom, pathto):
             if n1 == n2:
                 common += 1
                 continue
