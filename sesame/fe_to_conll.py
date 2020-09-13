@@ -11,7 +11,7 @@ def read_sents(sent_file):
             words = line.strip().split()
             sentences.append(words)
         sentf.close()
-    print "number of sentences", len(sentences)
+    print(f"number of sentences: {len(sentences)}")
     return sentences
 
 def read_fe_file(fe_file):
@@ -32,15 +32,15 @@ def read_fe_file(fe_file):
                 tfdict = frames[sentnum]
             for tp in targetpos:
                 if int(tp) in tfdict:
-                    print "repetition!!!", tfdict, sentnum, "repeated target =", tp, (fields[3],fields[4])
+                    print(f"repetition!!! {tfdict, sentnum,} repeated target = {tp, (fields[3],fields[4])}")
                     tfdict1[int(tp)] = (fields[3],fields[4])
                     sent1 = sentnum
                     continue
                 tfdict[int(tp)] = (fields[3],fields[4])
             frames[sentnum]= tfdict
             numframes += int(len(targetpos) > 0)
-        print "number of annotated sentences", len(frames)
-        print "number of FSPs", numframes
+        print(f"number of annotated sentences: {len(frames)}")
+        print(f"number of FSPs: {numframes}")
         fef.close()
     return frames, tfdict1, sent1
 

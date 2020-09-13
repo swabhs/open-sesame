@@ -77,8 +77,8 @@ def count_frame_elements(fefile):
                 if spanlen > 20:
                     haslongerspans = True
         fef.close()
-    print "#FEs =", numfes / 2
-    print "contains longer spans?", haslongerspans
+    print(f"#FEs = {numfes / 2}")
+    print(f"contains longer spans? {haslongerspans}")
 
 
 def detail_read_fe_file(fefile):
@@ -102,7 +102,7 @@ def detail_read_fe_file(fefile):
                 for x in range(8, len(fields), 2):
                     fefield, fespan = fields[x:x + 2]
                     if fefield in fes:
-                        print "discontinous FEs found in ", fields[2:]
+                        print("discontinous FEs found in ", fields[2:])
                         exwithdiscontfe += 1
                     else:
                         fes[fefield] = []
@@ -146,23 +146,23 @@ def compare_fefiles(fefile1, fefile2):
             raise Exception("different frames in sent ", sent, framel1[sent], framel2[sent])
         for key in tf1:
             if key not in tf2:
-                print "where is this frame in " + fefile2 + " ", sent, key, tf1[key]
+                print("where is this frame in " + fefile2 + " ", sent, key, tf1[key])
         for key in tf2:
             if key not in tf1:
-                print "where is this frame in " + fefile1 + " ", sent, key, tf2[key]
+                print("where is this frame in " + fefile1 + " ", sent, key, tf2[key])
 
         # they have same frames
         for key in tf1:
             if key not in tf2: continue
             if len(tf1[key]) != len(tf2[key]):
-                print "different number of FEs!", sent, key, tf1[key], tf2[key]
+                print("different number of FEs!", sent, key, tf1[key], tf2[key])
             for fe in tf1[key]:
                 if fe not in tf2[key]:
-                    print "missing FE in " + fefile2 + " ", sent, fe, tf1[key]
+                    print("missing FE in " + fefile2 + " ", sent, fe, tf1[key])
 
             for fe in tf2[key]:
                 if fe not in tf1[key]:
-                    print "missing FE in " + fefile1 + " ", sent, fe, tf2[key]
+                    print("missing FE in " + fefile1 + " ", sent, fe, tf2[key])
 
             # they have same fes
             for fe in tf2[key]:

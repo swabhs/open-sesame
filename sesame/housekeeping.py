@@ -59,7 +59,7 @@ class FspDict:
             raise Exception("not in dictionary", itemid)
 
     def printdict(self):
-        print sorted(self._strtoint.keys())
+        print(sorted(self._strtoint.keys()))
 
     def size(self):
         if not self._locked:
@@ -91,7 +91,6 @@ class FspDict:
         """
         :return: Number of unknowns attempted to be added to dictionary
         """
-        # print self._unks
         return len(self._unseens), len(self._unks)
 
     def getidset(self):
@@ -142,7 +141,6 @@ def filter_long_ex(dataset, use_span_clip, allowed_spanlen, notanfeid):
     tmpdataset = []
     for ex in dataset:
         haslongfe = False
-        # print "before", ex.invertedfes
         for feid in ex.invertedfes:
             haslongspans = False
 
@@ -159,9 +157,6 @@ def filter_long_ex(dataset, use_span_clip, allowed_spanlen, notanfeid):
             if haslongspans and use_span_clip:
                 clip_long_spans(ex.invertedfes[feid], allowed_spanlen)
 
-        # if haslongfe:
-        #     print "after ", ex.invertedfes
-        # print
         if haslongfe and not use_span_clip:
             continue  # filter out long examples
         tmpdataset.append(ex)
@@ -183,7 +178,6 @@ def clip_long_spans(spans, maxspanlen):
 
     if len(faultyspans) == 0:
         return spans
-    # print ranges
     for span in faultyspans:
         spanlen = span[1] - span[0] + 1
         numbreaks = spanlen / maxspanlen
