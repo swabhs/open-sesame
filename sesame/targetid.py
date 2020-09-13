@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 import codecs
 import json
+import numpy as np
 import os
 import random
 import sys
 import time
+import tqdm
 from optparse import OptionParser
 
-from dynet import *
+from dynet import Model, LSTMBuilder, SimpleSGDTrainer, lookup, concatenate, rectify, renew_cg, dropout, log_softmax, esum, pick
 
 from conll09 import lock_dicts, post_train_lock_dicts, VOCDICT, POSDICT, LEMDICT, LUDICT, LUPOSDICT
 from dataio import create_target_lu_map, get_wvec_map, read_conll
@@ -343,18 +345,24 @@ if options.mode in ["refresh"]:
 
 if options.mode in ["train", "refresh"]:
     loss = 0.0
+    dev_f1 = best_dev_f1 = trainf = 0.0
     train_result = [0.0, 0.0, 0.0]
 
     last_updated_epoch = 0
+    epochs_trained = 0
+    epoch_iterator = tqdm.trange(epochs_trained,
+                                 NUM_EPOCHS,
+                                 desc="TargetID Epoch")
 
-    for epoch in xrange(NUM_EPOCHS):
+    for epoch, _ in enumerate(epoch_iterator):
         random.shuffle(combined_train)
-        for idx, trex in enumerate(combined_train, 1):
-            if idx % EVAL_EVERY_EPOCH == 0:
-                trainer.status()
-                _, _, trainf = calc_f(train_result)
-                sys.stderr.write("epoch = %d.%d loss = %.6f train f1 = %.4f\n" %(epoch, idx, loss/idx, trainf))
-                train_result = [0.0, 0.0, 0.0]
+        train_iterator = tqdm.tqdm(combined_train,
+                                   desc="Iteration")
+        trainer.status()
+        for idx, trex in enumerate(train_iterator, 1):
+            train_iterator.set_description(
+                "epoch = %d loss = %.6f train_f1 = %.4f val_f1 = %.4f best_val_f1 = %.4f" %(
+                    epoch, loss/idx, trainf, dev_f1, best_dev_f1))
             inptoks = []
             unk_replace_tokens(trex.tokens, inptoks, VOCDICT, UNK_PROB, UNKTOKEN)
 
@@ -386,24 +394,19 @@ if options.mode in ["train", "refresh"]:
 
                 dev_p, dev_r, dev_f1 = calc_f(corpus_result)
                 dev_tp, dev_fp, dev_fn = corpus_result
-                sys.stderr.write("[dev epoch=%d] loss = %.6f "
-                                 "p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f"
-                                 % (epoch, devloss/devtagged,
-                                    dev_p, dev_tp, dev_tp + dev_fp,
-                                    dev_r, dev_tp, dev_tp + dev_fn,
-                                    dev_f1))
+                dev_eval_str = "[dev epoch=%d] loss = %.6f p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f" % (
+                    epoch, devloss/devtagged, dev_p, dev_tp, dev_tp + dev_fp, dev_r, dev_tp, dev_tp + dev_fn, dev_f1)
                 if dev_f1 > best_dev_f1:
                     best_dev_f1 = dev_f1
                     with open(os.path.join(model_dir, "best-dev-f1.txt"), "w") as fout:
                         fout.write("{}\n".format(best_dev_f1))
 
-                    sys.stderr.write(" -- saving to {}".format(model_file_name))
                     model.save(model_file_name)
                     print_as_conll(combined_dev, predictions)
 
                     last_updated_epoch = epoch
-                sys.stderr.write("\n")
         if epoch - last_updated_epoch > PATIENCE:
+            sys.stderr.write("Best model with F1 = {} saved to {}\n".format(best_dev_f1, model_file_name))
             sys.stderr.write("Ran out of patience, ending training.\n")
             break
         loss = 0.0

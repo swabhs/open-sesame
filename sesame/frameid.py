@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import codecs
 import json
+import numpy as np
 import os
 import random
 import sys
@@ -8,7 +9,7 @@ import time
 import tqdm
 from optparse import OptionParser
 
-from dynet import *
+from dynet import Model, LSTMBuilder, SimpleSGDTrainer, lookup, concatenate, rectify, renew_cg, dropout, log_softmax, esum, pick
 
 from conll09 import lock_dicts, post_train_lock_dicts, VOCDICT, POSDICT, FRAMEDICT, LUDICT, LUPOSDICT
 from dataio import get_wvec_map, read_conll, read_related_lus
@@ -228,10 +229,7 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
     bw_x = b_init.transduce(reversed(emb2_x))
 
     # only using the first target position - summing them hurts :(
-    try:
-        targetembs = [concatenate([fw_x[targetidx], bw_x[sentlen - targetidx - 1]]) for targetidx in targetpositions]
-    except:
-        import ipdb; ipdb.set_trace()
+    targetembs = [concatenate([fw_x[targetidx], bw_x[sentlen - targetidx - 1]]) for targetidx in targetpositions]
     targinit = tlstm.initial_state()
     target_vec = targinit.transduce(targetembs)[-1]
 
@@ -293,8 +291,7 @@ if options.mode in ["train", "refresh"]:
     epochs_trained = 0
     epoch_iterator = tqdm.trange(epochs_trained,
                                  NUM_EPOCHS,
-                                 desc="Epoch",
-                                 mininterval=10)
+                                 desc="FrameID Epoch")
 
     for epoch, _ in enumerate(epoch_iterator):
         random.shuffle(trainexamples)
@@ -303,7 +300,7 @@ if options.mode in ["train", "refresh"]:
         trainer.status()
         for idx, trex in enumerate(train_iterator, 1):
             train_iterator.set_description(
-                "epoch = %d loss = %.6f val_f1 = %.4f (%.1f/%.1f) best_val_f1 = %.4f" %(
+                "epoch = %d loss = %.6f val_f1 = %.4f (%d/%d) best_val_f1 = %.4f" %(
                     epoch, loss/idx, devf, devtp, devtp + devfp, best_dev_f1))
 
             inptoks = []
@@ -344,7 +341,6 @@ if options.mode in ["train", "refresh"]:
                     print_as_conll(devexamples, predictions)
                     model.save(model_file_name)
                     last_updated_epoch = epoch
-                sys.stderr.write("\n")
         if epoch - last_updated_epoch > PATIENCE:
             sys.stderr.write("Best model with F1 = {} saved to {}\n".format(best_dev_f1, model_file_name))
             sys.stderr.write("Ran out of patience, ending training.\n")

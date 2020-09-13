@@ -2,7 +2,8 @@
 from copy import deepcopy
 
 from frame_semantic_graph import LexicalUnit, Frame, FrameElement, FrameSemParse
-from housekeeping import *
+from globalconfig import EMPTY_LABEL, EMPTY_FE, BIO_INDEX_DICT, INDEX_BIO_DICT, DEBUG_MODE, SINGULAR, BEGINNING, INSIDE
+from housekeeping import FspDict, extract_spans
 
 VOCDICT = FspDict()
 LEMDICT = FspDict()
