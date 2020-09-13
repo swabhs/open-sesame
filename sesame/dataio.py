@@ -1,4 +1,19 @@
-# -*- coding: utf-8 -*-
+# coding=utf-8
+# Copyright 2018 Swabha Swayamdipta. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from __future__ import division
+
 import codecs
 import os
 import sys
@@ -57,8 +72,8 @@ def read_conll(conll_file, syn_type=None):
                 continue
             elements.append(CoNLL09Element(l, read_depsyn))
         cf.close()
-    sys.stderr.write("# examples in %s : %d in %d sents\n" %(conll_file, len(examples), next_ex))
-    sys.stderr.write("# examples with missing arguments : %d\n" %missingargs)
+    sys.stderr.write("# examples in %s : %d in %d sents\n" % (conll_file, len(examples), next_ex))
+    sys.stderr.write("# examples with missing arguments : %d\n" % missingargs)
     if read_constits:
         analyze_constits_fes(examples)
     return examples, missingargs, totalexamples
@@ -86,11 +101,11 @@ def analyze_constits_fes(examples):
     sys.stderr.write("matches = %d %.2f%%\n"
                      "non-matches = %d %.2f%%\n"
                      "total = %d\n"
-                     % (matchspan, matchspan*100/tot, notmatch, notmatch*100/tot, tot))
-    sys.stderr.write("phrases which are constits = %d\n" %(len(matchph)))
+                     % (matchspan, matchspan * 100 / tot, notmatch, notmatch * 100 / tot, tot))
+    sys.stderr.write("phrases which are constits = %d\n" % (len(matchph)))
 
 
-def create_target_frame_map(luIndex_file,  tf_map):
+def create_target_frame_map(luIndex_file, tf_map):
     sys.stderr.write("\nReading the frame - lexunit map from " + LU_INDEX + " ...\n")
 
     f = open(luIndex_file, "rb")
@@ -346,14 +361,14 @@ def read_frame_relations():
 
     f.close()
 
-    for leaf in relations.keys():
+    for leaf in list(relations.keys()):
         if leaf not in paths:
             paths[leaf] = []
         paths[leaf] += get_chains(leaf, relations, [])
-    xpaths = {p:set(paths[p]) for p in paths}
+    xpaths = {p: set(paths[p]) for p in paths}
 
-    # TODO: not sure why there is a problem with getting the entire path for FE relations
-    # TODO: for now, it's only one hop
+    # TODO(Swabha): not sure why there is a problem with getting the entire path for FE relations
+    # TODO(Swabha): for now, it's only one hop
     # for feleaf in fe_relations.keys():
     #     fe_relations[feleaf] = list(set(fe_relations[feleaf]))
     #     if feleaf not in fepaths:
@@ -362,9 +377,9 @@ def read_frame_relations():
     # xfepaths = {p:set(fepaths[p]) for p in fepaths}
 
     sys.stderr.write("# descendant frames: %d commonest descendant = %s (%d parents)\n"
-                     %(len(xpaths), FRAMEDICT.getstr(commonest_frame_child), max_num_parents))
+                     % (len(xpaths), FRAMEDICT.getstr(commonest_frame_child), max_num_parents))
     sys.stderr.write("# descendant FEs: %d commonest descendant = %s (%d parents)\n\n"
-                     %(len(fe_relations), FEDICT.getstr(commonest_fe_child), max_parent_fes))
+                     % (len(fe_relations), FEDICT.getstr(commonest_fe_child), max_parent_fes))
 
     return xpaths, fe_relations
 
@@ -388,13 +403,13 @@ def read_ptb():
             for p in parses:
                 ptbsf.write(" ".join(p.leaves()) + "\n")
                 tokpos = p.pos()
-                tokens = [VOCDICT.addstr(tok) for tok,pos in tokpos]
-                postags = [POSDICT.addstr(pos) for tok,pos in tokpos]
+                tokens = [VOCDICT.addstr(tok) for tok, pos in tokpos]
+                postags = [POSDICT.addstr(pos) for tok, pos in tokpos]
                 s = Sentence("constit",sentnum=senno,tokens=tokens,postags=postags,)
                 s.get_all_parts_of_ctree(p, CLABELDICT, False)
                 sentences.append(s)
                 senno += 1
-        sys.stderr.write("# PTB sentences: %d\n" %len(sentences))
+        sys.stderr.write("# PTB sentences: %d\n" % len(sentences))
         ptbsf.close()
     return sentences
 

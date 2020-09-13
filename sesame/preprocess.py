@@ -1,12 +1,29 @@
-# -*- coding: utf-8 -*-
+# coding=utf-8
+# Copyright 2018 Swabha Swayamdipta. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from __future__ import division
+
 '''
 Reads XML files containing FrameNet 1.$VERSION annotations, and converts them to a CoNLL 2009-like format.
 '''
 import codecs
 import os.path
 import sys
-# reload(sys)
-# sys.setdefaultencoding('utf-8')
+
+import importlib
+importlib.reload(sys)
+
 import tqdm
 import xml.etree.ElementTree as et
 from optparse import OptionParser
@@ -37,14 +54,14 @@ relevantfelayers = ["Target", "FE"]
 relevantposlayers = ["BNC", "PENN"]
 ns = {'fn' : 'http://framenet.icsi.berkeley.edu'}
 
-firsts = {trainf : True,
-          devf : True,
-          testf : True,
-          ftetrainf : True}
-sizes = {trainf : 0,
-         devf : 0,
-         testf : 0,
-         ftetrainf : 0}
+firsts = {trainf: True,
+          devf: True,
+          testf: True,
+          ftetrainf: True}
+sizes = {trainf: 0,
+         devf: 0,
+         testf: 0,
+         ftetrainf: 0}
 totsents = numsentsreused = fspno = numlus = 0.0
 isfirst = isfirstsent = True
 
@@ -58,17 +75,17 @@ def write_to_conll(outf, fsp, firstex, sentid):
         for i in range(fsp.sent.size()):
             token, postag, nltkpostag, nltklemma, lu, frm, role = fsp.info_at_idx(i)
 
-            outf.write(str(i+1) + "\t") # ID = 0
-            outf.write(token + "\t") # FORM = 1
-            outf.write("_\t" + nltklemma + "\t") # LEMMA PLEMMA = 2,3
-            outf.write(postag + "\t" + nltkpostag + "\t") # POS PPOS = 4,5
-            outf.write(str(sentid-1) + "\t_\t") # FEAT PFEAT = 6,7 ~ replacing FEAT with sentence number
-            outf.write("_\t_\t") # HEAD PHEAD = 8,9
-            outf.write("_\t_\t") # DEPREL PDEPREL = 10,11
-            outf.write(lu + "\t" + frm + "\t") # FILLPRED PRED = 12,13
-            outf.write(role + "\n") #APREDS = 14
+            outf.write(str(i + 1) + "\t")  # ID = 0
+            outf.write(str(token.encode('utf-8')) + "\t")  # FORM = 1
+            outf.write("_\t" + nltklemma + "\t")  # LEMMA PLEMMA = 2,3
+            outf.write(postag + "\t" + nltkpostag + "\t") . # POS PPOS = 4,5
+            outf.write(str(sentid - 1) + "\t_\t")  # FEAT PFEAT = 6,7 ~ replacing FEAT with sentence number
+            outf.write("_\t_\t")  # HEAD PHEAD = 8,9
+            outf.write("_\t_\t")  # DEPREL PDEPREL = 10,11
+            outf.write(lu + "\t" + frm + "\t")  # FILLPRED PRED = 12,13
+            outf.write(role + "\n")  #APREDS = 14
 
-        outf.write("\n") # end of sentence
+        outf.write("\n")  # end of sentence
         outf.close()
 
 
@@ -77,7 +94,7 @@ def write_to_sent_file(outsentf, sentence, isfirstsent):
     if isfirstsent: mode = "w"
 
     with codecs.open(outsentf, mode, "utf-8") as outf:
-        outf.write(sentence + "\n") # end of sentence
+        outf.write(sentence + "\n")  # end of sentence
         outf.close()
 
 
@@ -93,7 +110,7 @@ def process_xml_labels(label, layertype):
 
 def process_sent(sent, outsentf, isfirstsent):
     senttext = ""
-    for t in sent.findall('fn:text', ns): # not a real loop
+    for t in sent.findall('fn:text', ns):  # not a real loop
         senttext = t.text
 
     write_to_sent_file(outsentf, senttext, isfirstsent)
@@ -148,12 +165,12 @@ def get_all_fsps_in_sent(sent, sentann, fspno, lex_unit, frame, isfulltextann, c
             logger.write("\tannotation: " + str(anno_id) + "\t" + frame + "\t" + lex_unit + "\n")
         fsp = FrameAnnotation(lex_unit, frame, sentann)
 
-        for layer in anno.findall('fn:layer', ns): # not a real loop
+        for layer in anno.findall('fn:layer', ns):  # not a real loop
             layertype = layer.attrib["name"]
             if layertype not in relevantfelayers:
                 continue
             if layertype == "Target" :
-                for label in layer.findall('fn:label', ns): # can be a real loop
+                for label in layer.findall('fn:label', ns):  # can be a real loop
                     startend = process_xml_labels(label, layertype)
                     if startend is None:
                         break
@@ -228,17 +245,17 @@ def get_annoids(filelist, outf, outsentf):
             if len(fsps) == 0: invalidsents += 1
             if sentann.text in sents:
                 repeated += 1
-            for fsp in fsps.values():
+            for fsp in list(fsps.values()):
                 sents.add(sentann.text)
                 write_to_conll(outf, fsp, isfirstex, numsents)
                 sizes[outf] += 1
                 isfirstex = False
         xml_file.close()
-    sys.stderr.write("# total sents processed = %d\n" %numsents)
-    sys.stderr.write("# repeated sents        = %d\n" %repeated)
-    sys.stderr.write("# invalid sents         = %d\n" %invalidsents)
-    sys.stderr.write("# sents in set          = %d\n" %len(sents))
-    sys.stderr.write("# annotations           = %d\n" %totfsps)
+    sys.stderr.write("# total sents processed = %d\n" % numsents)
+    sys.stderr.write("# repeated sents        = %d\n" % repeated)
+    sys.stderr.write("# invalid sents         = %d\n" % invalidsents)
+    sys.stderr.write("# sents in set          = %d\n" % len(sents))
+    sys.stderr.write("# annotations           = %d\n" % totfsps)
     return annos
 
 
@@ -272,7 +289,7 @@ def process_lu_xml(lufname, all_exemplars, dev_annos, test_annos):
     with codecs.open(lufname, 'rb', 'utf-8') as xml_file:
         tree = et.parse(xml_file)
     root = tree.getroot()
-    ns ={'fn' : 'http://framenet.icsi.berkeley.edu'}
+    ns = {'fn': 'http://framenet.icsi.berkeley.edu'}
 
     frame = root.attrib["frame"]
     lex_unit = root.attrib["name"]
@@ -330,7 +347,7 @@ def process_exemplars(dev_annos, test_annos):
     all_exemplars = {}
     for luname in tqdm.tqdm(sorted(all_lus)):
         if not os.path.isfile(luname):
-            logger.write("\t\tIssue: Couldn't find %s - strange, terminating!\n" %(luname))
+            logger.write("\t\tIssue: Couldn't find %s - strange, terminating!\n" % (luname))
             break
         all_exemplars = process_lu_xml(luname, all_exemplars, dev_annos, test_annos)
 
@@ -342,14 +359,14 @@ def process_exemplars(dev_annos, test_annos):
             write_to_conll(trainf, fsp_, isfirst, sentid=write_id)
             isfirst = False
 
-    sys.stderr.write("\n\n# total LU sents = %d \n" %(totsents))
-    sys.stderr.write("# total LU FSPs = %d \n"  %(fspno))
-    sys.stderr.write("# total LU files = %d \n" %(numlus))
-    sys.stderr.write("average # FSPs per LU = %.3f \n" %(fspno / numlus))
+    sys.stderr.write("\n\n# total LU sents = %d \n" % (totsents))
+    sys.stderr.write("# total LU FSPs = %d \n"  % (fspno))
+    sys.stderr.write("# total LU files = %d \n" % (numlus))
+    sys.stderr.write("average # FSPs per LU = %.3f \n" % (fspno / numlus))
     sys.stderr.write("# LU sents reused for multiple annotations = %d \n" % (numsentsreused))
     sys.stderr.write("\noutput file sizes:\n")
     for s in sizes:
-        sys.stderr.write("%s :\t %d \n" %(s, sizes[s]))
+        sys.stderr.write("%s :\t %d \n" % (s, sizes[s]))
     sys.stderr.write("\n")
 
 
@@ -362,7 +379,7 @@ def filter_embeddings(embedding_files):
     corpora = [DEV_CONLL, TRAIN_FTE, TRAIN_EXEMPLAR, TEST_CONLL]
     for corpus in corpora:
         with codecs.open(corpus, "r", "utf-8") as cf:
-            tokens = [line.split("\t")[1].lower() for line in cf  if line != "\n"]
+            tokens = [line.split("\t")[1].lower() for line in cf if line != "\n"]
             cf.close()
         vocab.update(tokens)
     sys.stderr.write("\nTotal (train + dev + test) vocabulary size = {}\nFiltering out the word vectors ...".format(len(vocab)))

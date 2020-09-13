@@ -1,4 +1,19 @@
-# -*- coding: utf-8 -*-
+# coding=utf-8
+# Copyright 2018 Swabha Swayamdipta. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from __future__ import division
+
 import codecs
 import json
 import math
@@ -324,11 +339,11 @@ def get_base_embeddings(trainmode, unkdtokens, tg_start, sentence):
     sentlen = len(unkdtokens)
 
     if trainmode:
-        emb_x = [noise(v_x[tok], 0.1) for tok in unkdtokens]
+        emb_x = [dy.noise(v_x[tok], 0.1) for tok in unkdtokens]
     else:
         emb_x = [v_x[tok] for tok in unkdtokens]
     pos_x = [p_x[pos] for pos in sentence.postags]
-    dist_x = [scalarInput(i - tg_start + 1) for i in range(sentlen)]
+    dist_x = [dy.scalarInput(i - tg_start + 1) for i in range(sentlen)]
 
     baseinp_x = [(w_i * dy.concatenate([emb_x[j], pos_x[j], dist_x[j]]) + b_i) for j in range(sentlen)]
 
@@ -372,7 +387,7 @@ def get_target_frame_embeddings(embposdist_x, tfdict):
     target_x = tginit.transduce(embposdist_x[tg_start: tg_start + len(tfkeys) + 1])[-1]
 
     # Adding context features
-    ctxt = range(tg_start - 1, tfkeys[-1] + 2)
+    ctxt = list(range(tg_start - 1, tfkeys[-1] + 2))
     if ctxt[0] < 0: ctxt = ctxt[1:]
     if ctxt[-1] > sentlen: ctxt = ctxt[:-1]
     c_init = ctxtlstm.initial_state()
@@ -465,7 +480,7 @@ def get_factor_expressions(fws, bws, tfemb, tfdict, valid_fes, sentence, spaths_
     factexprs = {}
     sentlen = len(fws)
 
-    sortedtfd = sorted(tfdict.keys())
+    sortedtfd = sorted(list(tfdict.keys()))
     targetspan = (sortedtfd[0], sortedtfd[-1])
 
     for j in range(sentlen):
@@ -925,7 +940,7 @@ if options.mode in ["train", "refresh"]:
         adam.status()
         for idx, trex in enumerate(train_iterator, 1):
             train_iterator.set_description(
-                "epoch = %d loss = %.6f val_Lf1 = %.4f best_val_Lf1 = %.4f" %(
+                "epoch = %d loss = %.6f val_Lf1 = %.4f best_val_Lf1 = %.4f" % (
                     epoch, loss/idx, lf, best_dev_f1))
 
             unkedtoks = []
@@ -934,7 +949,7 @@ if options.mode in ["train", "refresh"]:
             if USE_PTB_CONSTITS and type(trex) == Sentence:  # a PTB example
                 trexloss, taggedinex = identify_spans(unkedtoks,
                                                       trex,
-                                                      trex.constitspans.keys())
+                                                      list(trex.constitspans.keys()))
             else:  # an FN example
                 trexloss, taggedinex = identify_fes(unkedtoks,
                                                     trex.sentence,
@@ -973,10 +988,10 @@ if options.mode in ["train", "refresh"]:
                 if lf > best_dev_f1:
                     best_dev_f1 = lf
                     up, ur, uf = calc_f(ures)
-                    uprec_str = "uprec = %.5f urec = %.5f uf1 = %.5f" %(up, ur, uf)
+                    uprec_str = "uprec = %.5f urec = %.5f uf1 = %.5f" % (up, ur, uf)
                     wp, wr, wf = calc_f(tokenwise)
-                    wprec_str = "wprec = %.5f wrec = %.5f wf1 = %.5f" %(wp, wr, wf)
-                    lprec_str = "lprec = %.5f lrec = %.5f lf1 = %.5f" %(lp, lr, lf)
+                    wprec_str = "wprec = %.5f wrec = %.5f wf1 = %.5f" % (wp, wr, wf)
+                    lprec_str = "lprec = %.5f lrec = %.5f lf1 = %.5f" % (lp, lr, lf)
                     best_dev_eval_str = "[VAL best epoch=%d] %s\n%s \n%s\n" % (
                         epoch, wprec_str, uprec_str, lprec_str)
 

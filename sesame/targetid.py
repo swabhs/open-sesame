@@ -1,11 +1,26 @@
-# -*- coding: utf-8 -*-
+# coding=utf-8
+# Copyright 2018 Swabha Swayamdipta. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import division
+
 import codecs
 import json
 import numpy as np
 import os
 import random
 import sys
-import time
 import tqdm
 from optparse import OptionParser
 
@@ -87,14 +102,14 @@ if options.mode in ["train", "refresh"]:
     dev_examples, _, _ = read_conll(DEV_CONLL)
     combined_dev = combine_examples(dev_examples)
     out_conll_file = "{}predicted-{}-targetid-dev.conll".format(model_dir, VERSION)
-elif options.mode  == "test":
+elif options.mode == "test":
     dev_examples, m, t = read_conll(TEST_CONLL)
     combined_dev = combine_examples(dev_examples)
     out_conll_file = "{}predicted-{}-targetid-test.conll".format(model_dir, VERSION)
 elif options.mode == "predict":
     assert options.raw_input is not None
     with open(options.raw_input, "r") as fin:
-        instances = [make_data_instance(line, i) for i,line in enumerate(fin)]
+        instances = [make_data_instance(line, i) for i, line in enumerate(fin)]
     out_conll_file = "{}predicted-targets.conll".format(model_dir)
 else:
     raise Exception("Invalid parser mode", options.mode)
@@ -254,7 +269,7 @@ builders = [
     LSTMBuilder(LSTM_DEPTH, LSTM_INP_DIM, LSTM_DIM, model),
 ]
 
-w_z = model.add_parameters((HIDDEN_DIM, 2*LSTM_DIM))
+w_z = model.add_parameters((HIDDEN_DIM, 2 * LSTM_DIM))
 b_z = model.add_parameters((HIDDEN_DIM, 1))
 w_f = model.add_parameters((2, HIDDEN_DIM))  # prediction: is a target or not.
 b_f = model.add_parameters((2, 1))
@@ -361,14 +376,14 @@ if options.mode in ["train", "refresh"]:
         trainer.status()
         for idx, trex in enumerate(train_iterator, 1):
             train_iterator.set_description(
-                "epoch = %d loss = %.6f train_f1 = %.4f val_f1 = %.4f best_val_f1 = %.4f" %(
+                "epoch = %d loss = %.6f train_f1 = %.4f val_f1 = %.4f best_val_f1 = %.4f" % (
                     epoch, loss/idx, trainf, dev_f1, best_dev_f1))
             inptoks = []
             unk_replace_tokens(trex.tokens, inptoks, VOCDICT, UNK_PROB, UNKTOKEN)
 
             trex_loss, trexpred = identify_targets(
                 builders, inptoks, trex.postags, trex.lemmas, gold_targets=trex.targetframedict.keys())
-            trainex_result = evaluate_example_targetid(trex.targetframedict.keys(), trexpred)
+            trainex_result = evaluate_example_targetid(list(trex.targetframedict.keys()), trexpred)
             train_result = np.add(train_result, trainex_result)
 
             if trex_loss is not None:
@@ -388,7 +403,7 @@ if options.mode in ["train", "refresh"]:
                         devloss += dl.scalar_value()
                     predictions.append(predicted)
 
-                    devex_result = evaluate_example_targetid(devex.targetframedict.keys(), predicted)
+                    devex_result = evaluate_example_targetid(list(devex.targetframedict.keys()), predicted)
                     corpus_result = np.add(corpus_result, devex_result)
                     devtagged += 1
 
@@ -398,7 +413,7 @@ if options.mode in ["train", "refresh"]:
                 if dev_f1 > best_dev_f1:
                     best_dev_f1 = dev_f1
                     dev_eval_str = "[VAL best epoch=%d] loss = %.6f p = %.4f (%d/%d) r = %.4f (%d/%d) f1 = %.4f" % (
-                        epoch, devloss/devtagged, dev_p, dev_tp, dev_tp + dev_fp, dev_r, dev_tp, dev_tp + dev_fn, dev_f1)
+                        epoch, devloss  /devtagged, dev_p, dev_tp, dev_tp + dev_fp, dev_r, dev_tp, dev_tp + dev_fn, dev_f1)
                     with open(os.path.join(model_dir, "best-dev-f1.txt"), "w") as fout:
                         fout.write("{}\n".format(best_dev_f1))
 
@@ -430,7 +445,7 @@ elif options.mode == "test":
 
     test_tp, test_fp, test_fn = corpus_tp_fp_fn
     test_prec, test_rec, test_f1 = calc_f(corpus_tp_fp_fn)
-    sys.stderr.write("[test] p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f\n" %(
+    sys.stderr.write("[test] p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f\n" % (
         test_prec, test_tp, test_tp + test_fp,
         test_rec, test_tp, test_tp + test_fn,
         test_f1))

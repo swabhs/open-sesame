@@ -1,8 +1,21 @@
-# -*- coding: utf-8 -*-
+# coding=utf-8
+# Copyright 2018 Swabha Swayamdipta. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
 class ArgPosition(object):
-    BEFORE, AFTER, OVERLAP, WITHIN = range(4)
+    BEFORE, AFTER, OVERLAP, WITHIN = list(range(4))
 
     @staticmethod
     def size():
@@ -20,7 +33,7 @@ class ArgPosition(object):
 
 
 class SpanWidth(object):
-    one, two, threefive, fiveten, tenfifteen, fifteentwenty, evenmore = range(7)
+    one, two, threefive, fiveten, tenfifteen, fifteentwenty, evenmore = list(range(7))
 
     @staticmethod
     def size():
@@ -45,7 +58,7 @@ class SpanWidth(object):
 
 
 class OutHeads(object):
-    zero, one, two, three, four, five, btwn610, btwn1115, morethan15 = range(9)
+    zero, one, two, three, four, five, btwn610, btwn1115, morethan15 = list(range(9))
 
     @staticmethod
     def size():

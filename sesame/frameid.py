@@ -1,4 +1,19 @@
-# -*- coding: utf-8 -*-
+# coding=utf-8
+# Copyright 2018 Swabha Swayamdipta. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from __future__ import division
+
 import codecs
 import json
 import numpy as np
@@ -66,7 +81,7 @@ def find_multitokentargets(examples, split):
             if len(tfs) > 1:
                 raise Exception("different frames for neighboring targets!", tr.targetframedict)
     sys.stderr.write("multi-token targets in %s: %.3f%% [%d / %d]\n"
-                     %(split, multitoktargs*100/tottargs, multitoktargs, tottargs))
+                     % (split, multitoktargs*100/tottargs, multitoktargs, tottargs))
 
 trainexamples, m, t = read_conll(train_conll)
 find_multitokentargets(trainexamples, "train")
@@ -85,7 +100,7 @@ if options.mode in ["train", "refresh"]:
     devexamples, m, t = read_conll(DEV_CONLL)
     find_multitokentargets(devexamples, "dev/test")
     out_conll_file = "{}predicted-{}-frameid-dev.conll".format(model_dir, VERSION)
-elif options.mode  == "test":
+elif options.mode == "test":
     devexamples, m, t = read_conll(TEST_CONLL)
     find_multitokentargets(devexamples, "dev/test")
     out_conll_file = "{}predicted-{}-frameid-test.conll".format(model_dir, VERSION)
@@ -300,14 +315,14 @@ if options.mode in ["train", "refresh"]:
         trainer.status()
         for idx, trex in enumerate(train_iterator, 1):
             train_iterator.set_description(
-                "epoch = %d loss = %.6f val_f1 = %.4f (%d/%d) best_val_f1 = %.4f" %(
+                "epoch = %d loss = %.6f val_f1 = %.4f (%d/%d) best_val_f1 = %.4f" % (
                     epoch, loss/idx, devf, devtp, devtp + devfp, best_dev_f1))
 
             inptoks = []
             unk_replace_tokens(trex.tokens, inptoks, VOCDICT, UNK_PROB, UNKTOKEN)
 
             trexloss,_ = identify_frames(
-                builders, inptoks, trex.postags, trex.lu, trex.targetframedict.keys(), trex.frame)
+                builders, inptoks, trex.postags, trex.lu, list(trex.targetframedict.keys()), trex.frame)
 
             if trexloss is not None:
                 loss += trexloss.scalar_value()
@@ -321,7 +336,7 @@ if options.mode in ["train", "refresh"]:
                 for devex in devexamples:
                     devludict = devex.get_only_targets()
                     dl, predicted = identify_frames(
-                        builders, devex.tokens, devex.postags, devex.lu, devex.targetframedict.keys())
+                        builders, devex.tokens, devex.postags, devex.lu, list(devex.targetframedict.keys()))
                     if dl is not None:
                         devloss += dl.scalar_value()
                     predictions.append(predicted)
@@ -361,7 +376,7 @@ elif options.mode == "test":
     devexamples[0].print_internal_sent(logger)
 
     for testex in devexamples:
-        _, predicted = identify_frames(builders, testex.tokens, testex.postags, testex.lu, testex.targetframedict.keys())
+        _, predicted = identify_frames(builders, testex.tokens, testex.postags, testex.lu, list(testex.targetframedict.keys()))
 
         tpfpfn = evaluate_example_frameid(testex.frame, predicted)
         corpus_tpfpfn = np.add(corpus_tpfpfn, tpfpfn)
@@ -405,7 +420,7 @@ elif options.mode == "test":
 
     testp, testr, testf = calc_f(corpus_tpfpfn)
     testtp, testfp, testfn = corpus_tpfpfn
-    sys.stderr.write("[test] p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f\n" %(
+    sys.stderr.write("[test] p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f\n" % (
         testp, testtp, testtp + testfp,
         testr, testtp, testtp + testfp,
         testf))
@@ -425,7 +440,7 @@ elif options.mode == "predict":
 
     predictions = []
     for instance in instances:
-        _, prediction = identify_frames(builders, instance.tokens, instance.postags, instance.lu, instance.targetframedict.keys())
+        _, prediction = identify_frames(builders, instance.tokens, instance.postags, instance.lu, list(instance.targetframedict.keys()))
         predictions.append(prediction)
     sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
     print_as_conll(instances, predictions)
