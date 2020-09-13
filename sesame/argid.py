@@ -1,16 +1,26 @@
 # -*- coding: utf-8 -*-
+import codecs
 import json
 import math
+import numpy as np
 import os
+import random
 import sys
 import time
-from dynet import *
+import tqdm
+
+from dynet import Model, LSTMBuilder, SimpleSGDTrainer, AdamTrainer, lookup, concatenate, rectify, renew_cg, dropout, log_softmax, esum, pick, noise, scalarInput, nobackprop, logsumexp
 from optparse import OptionParser
 
-from evaluation import *
+from conll09 import VOCDICT, FRAMEDICT, FEDICT, LUDICT, LUPOSDICT, DEPRELDICT, CLABELDICT, POSDICT, LEMDICT, lock_dicts, post_train_lock_dicts
+from dataio import read_conll, get_wvec_map, read_ptb, read_frame_maps, read_frame_relations
+from evaluation import calc_f, evaluate_example_argid, evaluate_corpus_argid
+from globalconfig import VERSION, TRAIN_EXEMPLAR, TRAIN_FTE, TRAIN_FTE_CONSTITS, UNK, EMPTY_LABEL, EMPTY_FE, TEST_CONLL, DEV_CONLL
+from housekeeping import Factor, filter_long_ex, unk_replace_tokens
 from discrete_argid_feats import ArgPosition, OutHeads, SpanWidth
 from raw_data import make_data_instance
 from semafor_evaluation import convert_conll_to_frame_elements
+from sentence import Sentence
 
 
 optpr = OptionParser()
@@ -894,21 +904,29 @@ if options.mode in ["refresh"]:
 
 if options.mode in ["train", "refresh"]:
     loss = 0.0
+    lf = 0.0
     last_updated_epoch = 0
 
     if USE_PTB_CONSTITS:
         trainexamples = trainexamples + ptbexamples
 
     starttime = time.time()
-    for epoch in xrange(NUMEPOCHS):
+
+    epochs_trained = 0
+    epoch_iterator = tqdm.trange(epochs_trained,
+                                 NUMEPOCHS,
+                                 desc="ArgID Epoch")
+
+    for epoch, _ in enumerate(epoch_iterator):
         random.shuffle(trainexamples)
 
-        for idx, trex in enumerate(trainexamples, 1):
-            if (idx - 1) % LOSS_EVAL_EPOCH == 0 and idx > 1:
-                adam.status()
-                sys.stderr.write("epoch=%d.%d loss=%.4f [took %.3fs]\n" % (
-                    epoch, idx-1, (loss/idx), time.time() - starttime))
-                starttime = time.time()
+        train_iterator = tqdm.tqdm(trainexamples,
+                                   desc="Iteration")
+        adam.status()
+        for idx, trex in enumerate(train_iterator, 1):
+            train_iterator.set_description(
+                "epoch = %d loss = %.6f val_Lf1 = %.4f best_val_Lf1 = %.4f" %(
+                    epoch, loss/idx, lf, best_dev_f1))
 
             unkedtoks = []
             unk_replace_tokens(trex.tokens, unkedtoks, VOCDICT, UNK_PROB, UNKTOKEN)
@@ -950,28 +968,32 @@ if options.mode in ["train", "refresh"]:
 
                     predictions.append(dargmax)
 
-                up, ur, uf = calc_f(ures)
                 lp, lr, lf = calc_f(labldres)
-                wp, wr, wf = calc_f(tokenwise)
-                sys.stderr.write("[dev epoch=%d.%d] wprec = %.5f wrec = %.5f wf1 = %.5f\n"
-                                 "[dev epoch=%d.%d] uprec = %.5f urec = %.5f uf1 = %.5f\n"
-                                 "[dev epoch=%d.%d] lprec = %.5f lrec = %.5f lf1 = %.5f"
-                                 % (epoch, idx, wp, wr, wf, epoch, idx, up, ur, uf, epoch, idx, lp, lr, lf))
 
                 if lf > best_dev_f1:
                     best_dev_f1 = lf
+                    up, ur, uf = calc_f(ures)
+                    uprec_str = "uprec = %.5f urec = %.5f uf1 = %.5f" %(up, ur, uf)
+                    wp, wr, wf = calc_f(tokenwise)
+                    wprec_str = "wprec = %.5f wrec = %.5f wf1 = %.5f" %(wp, wr, wf)
+                    lprec_str = "lprec = %.5f lrec = %.5f lf1 = %.5f" %(lp, lr, lf)
+                    best_dev_eval_str = "[VAL best epoch=%d] %s\n%s \n%s\n" % (
+                        epoch, wprec_str, uprec_str, lprec_str)
+
                     with open(os.path.join(model_dir, "best-dev-f1.txt"), "w") as fout:
                         fout.write("{}\n".format(best_dev_f1))
                         fout.close()
 
                     print_as_conll(devexamples, predictions)
-                    sys.stderr.write(" -- saving to {}".format(model_file_name))
+                    # sys.stderr.write(" -- saving to {}".format(model_file_name))
                     model.save(model_file_name)
                     last_updated_epoch = epoch
-                sys.stderr.write(" [took %.3fs]\n" % (time.time() - devstarttime))
-                starttime = time.time()
+
         if epoch - last_updated_epoch > PATIENCE:
             sys.stderr.write("Ran out of patience, ending training.\n")
+            sys.stderr.write("Best model evaluation:\n{}\n".format(best_dev_eval_str))
+            sys.stderr.write("Best model saved to {}\n".format(model_file_name))
+            sys.stderr.write(" [took %.3fs]\n" % (time.time() - starttime))
             break
         loss = 0.0
 

@@ -342,8 +342,8 @@ if options.mode in ["train", "refresh"]:
                     model.save(model_file_name)
                     last_updated_epoch = epoch
         if epoch - last_updated_epoch > PATIENCE:
-            sys.stderr.write("Best model with F1 = {} saved to {}\n".format(best_dev_f1, model_file_name))
             sys.stderr.write("Ran out of patience, ending training.\n")
+            sys.stderr.write("Best model with F1 = {} saved to {}\n".format(best_dev_f1, model_file_name))
             break
         loss = 0.0
 

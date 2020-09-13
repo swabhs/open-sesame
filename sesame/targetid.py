@@ -394,10 +394,11 @@ if options.mode in ["train", "refresh"]:
 
                 dev_p, dev_r, dev_f1 = calc_f(corpus_result)
                 dev_tp, dev_fp, dev_fn = corpus_result
-                dev_eval_str = "[dev epoch=%d] loss = %.6f p = %.4f (%.1f/%.1f) r = %.4f (%.1f/%.1f) f1 = %.4f" % (
-                    epoch, devloss/devtagged, dev_p, dev_tp, dev_tp + dev_fp, dev_r, dev_tp, dev_tp + dev_fn, dev_f1)
+
                 if dev_f1 > best_dev_f1:
                     best_dev_f1 = dev_f1
+                    dev_eval_str = "[VAL best epoch=%d] loss = %.6f p = %.4f (%d/%d) r = %.4f (%d/%d) f1 = %.4f" % (
+                        epoch, devloss/devtagged, dev_p, dev_tp, dev_tp + dev_fp, dev_r, dev_tp, dev_tp + dev_fn, dev_f1)
                     with open(os.path.join(model_dir, "best-dev-f1.txt"), "w") as fout:
                         fout.write("{}\n".format(best_dev_f1))
 
@@ -406,8 +407,9 @@ if options.mode in ["train", "refresh"]:
 
                     last_updated_epoch = epoch
         if epoch - last_updated_epoch > PATIENCE:
-            sys.stderr.write("Best model with F1 = {} saved to {}\n".format(best_dev_f1, model_file_name))
             sys.stderr.write("Ran out of patience, ending training.\n")
+            sys.stderr.write("Best model evaluation:\n{}\n".format(dev_eval_str))
+            sys.stderr.write("Best model saved to {}\n".format(model_file_name))
             break
         loss = 0.0
 
