@@ -11,14 +11,14 @@ from optparse import OptionParser
 
 from dynet import Model, LSTMBuilder, SimpleSGDTrainer, lookup, concatenate, rectify, renew_cg, dropout, log_softmax, esum, pick
 
-from conll09 import lock_dicts, post_train_lock_dicts, VOCDICT, POSDICT, FRAMEDICT, LUDICT, LUPOSDICT
-from dataio import get_wvec_map, read_conll, read_related_lus
-from evaluation import calc_f, evaluate_example_frameid
-from frame_semantic_graph import Frame
-from globalconfig import VERSION, TRAIN_FTE, UNK, DEV_CONLL, TEST_CONLL, TRAIN_EXEMPLAR
-from housekeeping import unk_replace_tokens
-from raw_data import make_data_instance
-from semafor_evaluation import convert_conll_to_frame_elements
+from .conll09 import lock_dicts, post_train_lock_dicts, VOCDICT, POSDICT, FRAMEDICT, LUDICT, LUPOSDICT
+from .dataio import get_wvec_map, read_conll, read_related_lus
+from .evaluation import calc_f, evaluate_example_frameid
+from .frame_semantic_graph import Frame
+from .globalconfig import VERSION, TRAIN_FTE, UNK, DEV_CONLL, TEST_CONLL, TRAIN_EXEMPLAR
+from .housekeeping import unk_replace_tokens
+from .raw_data import make_data_instance
+from .semafor_evaluation import convert_conll_to_frame_elements
 
 
 optpr = OptionParser()

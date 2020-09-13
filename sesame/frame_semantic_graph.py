@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from globalconfig import DEBUG_MODE
+from .globalconfig import DEBUG_MODE
 
 class LexicalUnit(object):
 

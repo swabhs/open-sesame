@@ -8,9 +8,9 @@ import xml.etree.ElementTree as et
 
 from nltk.corpus import BracketParseCorpusReader
 
-from conll09 import CLABELDICT, VOCDICT, POSDICT, FRAMEDICT, FEDICT, LUDICT, LUPOSDICT, CoNLL09Element, CoNLL09Example
-from globalconfig import CONSTIT_MAP, EMPTY_LABEL, LU_INDEX, FRAME_DIR, EMBEDDINGS_FILE, FRAME_REL_FILE, PTB_DATA_DIR, PARSER_DATA_DIR
-from sentence import Sentence
+from .conll09 import CLABELDICT, VOCDICT, POSDICT, FRAMEDICT, FEDICT, LUDICT, LUPOSDICT, CoNLL09Element, CoNLL09Example
+from .globalconfig import CONSTIT_MAP, EMPTY_LABEL, LU_INDEX, FRAME_DIR, EMBEDDINGS_FILE, FRAME_REL_FILE, PTB_DATA_DIR, PARSER_DATA_DIR
+from .sentence import Sentence
 
 
 def read_conll(conll_file, syn_type=None):

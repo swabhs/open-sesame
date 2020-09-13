@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from globalconfig import UNK
 import random
 import sys
 
+from .globalconfig import UNK
 
 class FspDict:
     def __init__(self):

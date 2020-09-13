@@ -2,8 +2,8 @@
 import nltk
 lemmatizer = nltk.stem.WordNetLemmatizer()
 
-from conll09 import CoNLL09Element, CoNLL09Example
-from sentence import Sentence
+from .conll09 import CoNLL09Element, CoNLL09Example
+from .sentence import Sentence
 
 
 def make_data_instance(text, index):
@@ -13,8 +13,8 @@ def make_data_instance(text, index):
     tokenized = nltk.tokenize.word_tokenize(text.lstrip().rstrip())
     pos_tagged = [p[1] for p in nltk.pos_tag(tokenized)]
 
-    lemmatized = [lemmatizer.lemmatize(tokenized[i]) 
-                    if not pos_tagged[i].startswith("V") else lemmatizer.lemmatize(tokenized[i], pos='v') 
+    lemmatized = [lemmatizer.lemmatize(tokenized[i])
+                    if not pos_tagged[i].startswith("V") else lemmatizer.lemmatize(tokenized[i], pos='v')
                     for i in range(len(tokenized))]
 
     conll_lines = ["{}\t{}\t_\t{}\t_\t{}\t{}\t_\t_\t_\t_\t_\t_\t_\tO\n".format(

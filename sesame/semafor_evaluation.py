@@ -5,8 +5,8 @@ import sys
 from optparse import OptionParser
 
 import conll09 as c9
-from dataio import read_conll
-from globalconfig import EMPTY_FE
+from .dataio import read_conll
+from .globalconfig import EMPTY_FE
 
 
 def convert_conll_to_frame_elements(conllfile, fefile):

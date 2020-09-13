@@ -12,15 +12,15 @@ import tqdm
 from dynet import Model, LSTMBuilder, SimpleSGDTrainer, AdamTrainer, lookup, concatenate, rectify, renew_cg, dropout, log_softmax, esum, pick, noise, scalarInput, nobackprop, logsumexp
 from optparse import OptionParser
 
-from conll09 import VOCDICT, FRAMEDICT, FEDICT, LUDICT, LUPOSDICT, DEPRELDICT, CLABELDICT, POSDICT, LEMDICT, lock_dicts, post_train_lock_dicts
-from dataio import read_conll, get_wvec_map, read_ptb, read_frame_maps, read_frame_relations
-from evaluation import calc_f, evaluate_example_argid, evaluate_corpus_argid
-from globalconfig import VERSION, TRAIN_EXEMPLAR, TRAIN_FTE, TRAIN_FTE_CONSTITS, UNK, EMPTY_LABEL, EMPTY_FE, TEST_CONLL, DEV_CONLL
-from housekeeping import Factor, filter_long_ex, unk_replace_tokens
-from discrete_argid_feats import ArgPosition, OutHeads, SpanWidth
-from raw_data import make_data_instance
-from semafor_evaluation import convert_conll_to_frame_elements
-from sentence import Sentence
+from .conll09 import VOCDICT, FRAMEDICT, FEDICT, LUDICT, LUPOSDICT, DEPRELDICT, CLABELDICT, POSDICT, LEMDICT, lock_dicts, post_train_lock_dicts
+from .dataio import read_conll, get_wvec_map, read_ptb, read_frame_maps, read_frame_relations
+from .evaluation import calc_f, evaluate_example_argid, evaluate_corpus_argid
+from .globalconfig import VERSION, TRAIN_EXEMPLAR, TRAIN_FTE, TRAIN_FTE_CONSTITS, UNK, EMPTY_LABEL, EMPTY_FE, TEST_CONLL, DEV_CONLL
+from .housekeeping import Factor, filter_long_ex, unk_replace_tokens
+from .discrete_argid_feats import ArgPosition, OutHeads, SpanWidth
+from .raw_data import make_data_instance
+from .semafor_evaluation import convert_conll_to_frame_elements
+from .sentence import Sentence
 
 
 optpr = OptionParser()

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import codecs
-import globalconfig as gc
 import sys
+
+import globalconfig as gc
 
 def read_sents(sent_file):
     sentences = []
