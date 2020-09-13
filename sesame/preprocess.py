@@ -10,7 +10,8 @@ sys.setdefaultencoding('utf-8')
 import xml.etree.ElementTree as et
 from optparse import OptionParser
 
-from globalconfig import *
+from globalconfig import (VERSION, TRAIN_EXEMPLAR, TRAIN_FTE, DEV_CONLL, TEST_CONLL,
+                          FULLTEXT_DIR, PARSER_DATA_DIR, TEST_FILES, DEV_FILES, LU_DIR, EMBEDDINGS_FILE)
 from xml_annotations import FrameAnnotation, SentenceAnnotation
 
 
@@ -19,7 +20,7 @@ optpr.add_option("--filter_embeddings", action="store_true", default=False)
 optpr.add_option("--exemplar", action="store_true", default=False)
 (options, args) = optpr.parse_args()
 
-logger = open("preprocess-fn{}.log".format(VERSION), "w")
+logger = open(f"preprocess-fn{}.log".format(VERSION), "w")
 
 trainf = TRAIN_EXEMPLAR
 ftetrainf = TRAIN_FTE
@@ -194,7 +195,7 @@ def get_annoids(filelist, outf, outsentf):
     isfirstsentex = True
 
     for tfname in filelist:
-        tfname = FULLTEXT_DIR + tfname
+        tfname = os.path.join(FULLTEXT_DIR, tfname)
         logger.write("\n" + tfname + "\n")
         if not os.path.isfile(tfname):
             continue

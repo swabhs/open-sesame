@@ -1,12 +1,20 @@
 # -*- coding: utf-8 -*-
+import codecs
 import json
 import os
+import random
 import sys
 import time
 from optparse import OptionParser
 
 from dynet import *
-from evaluation import *
+
+from conll09 import lock_dicts, post_train_lock_dicts, VOCDICT, POSDICT, FRAMEDICT, LUDICT, LUPOSDICT
+from dataio import get_wvec_map, read_conll, read_related_lus
+from evaluation import calc_f, evaluate_example_frameid
+from frame_semantic_graph import Frame
+from globalconfig import VERSION, TRAIN_FTE, UNK, DEV_CONLL, TEST_CONLL
+from housekeeping import unk_replace_tokens
 from raw_data import make_data_instance
 from semafor_evaluation import convert_conll_to_frame_elements
 

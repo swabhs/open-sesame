@@ -14,7 +14,7 @@ DEBUG_MODE = configuration["debug_mode"]
 
 # The following variables are held constant throughout the repository. Change at your own peril!
 
-PARSER_DATA_DIR = DATA_DIR + "neural/fn" + VERSION + "/"
+PARSER_DATA_DIR = DATA_DIR + "open_sesame_v1_data/fn" + VERSION + "/"
 TRAIN_FTE = PARSER_DATA_DIR + "fn" + VERSION + ".fulltext.train.syntaxnet.conll"
 TRAIN_EXEMPLAR = PARSER_DATA_DIR + "fn" + VERSION + ".exemplar.train.syntaxnet.conll"
 DEV_CONLL = PARSER_DATA_DIR + "fn" + VERSION + ".dev.syntaxnet.conll"

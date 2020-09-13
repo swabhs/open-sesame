@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import time
-from dataio import *
+from dataio import read_conll, read_frame_maps
 from itertools import izip
 
 def calc_f(scores):
