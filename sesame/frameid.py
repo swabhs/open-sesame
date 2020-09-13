@@ -75,7 +75,7 @@ post_train_lock_dicts()
 lufrmmap, relatedlus = read_related_lus()
 if USE_WV:
     pretrained_embeddings_map = get_wvec_map()
-    PRETRAINED_DIM = len(pretrained_embeddings_map.values()[0])
+    PRETRAINED_DIM = len(list(pretrained_embeddings_map.values())[0])
 
 lock_dicts()
 UNKTOKEN = VOCDICT.getid(UNK)

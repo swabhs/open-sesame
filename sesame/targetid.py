@@ -78,7 +78,7 @@ post_train_lock_dicts()
 
 # Read pretrained word embeddings.
 pretrained_map = get_wvec_map()
-PRETRAINED_DIM = len(pretrained_map.values()[0])
+PRETRAINED_DIM = len(list(pretrained_map.values())[0])
 
 lock_dicts()
 UNKTOKEN = VOCDICT.getid(UNK)
