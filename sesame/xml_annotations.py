@@ -28,12 +28,12 @@ class SentenceAnnotation(object):
 
     def normalize_tokens(self, logger):
         if len(self.stindices) != len(self.enindices):
-            sys.stderr.write("\t\tIssue: overlapping tokenization for multiple tokens\n")
+            logger.write("\t\tIssue: overlapping tokenization for multiple tokens\n")
             return
         start = {}
         idx = 0
         for s in sorted(self.stindices):
-            self.stindices[s] = idx
+            self.stindices[s] = idx 
             start[idx] = s
             idx += 1
         end = {}

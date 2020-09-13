@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from globalconfig import *
+from globalconfig import UNK
 import random
 import sys
 

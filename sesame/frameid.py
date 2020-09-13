@@ -5,6 +5,7 @@ import os
 import random
 import sys
 import time
+import tqdm
 from optparse import OptionParser
 
 from dynet import *
@@ -13,7 +14,7 @@ from conll09 import lock_dicts, post_train_lock_dicts, VOCDICT, POSDICT, FRAMEDI
 from dataio import get_wvec_map, read_conll, read_related_lus
 from evaluation import calc_f, evaluate_example_frameid
 from frame_semantic_graph import Frame
-from globalconfig import VERSION, TRAIN_FTE, UNK, DEV_CONLL, TEST_CONLL
+from globalconfig import VERSION, TRAIN_FTE, UNK, DEV_CONLL, TEST_CONLL, TRAIN_EXEMPLAR
 from housekeeping import unk_replace_tokens
 from raw_data import make_data_instance
 from semafor_evaluation import convert_conll_to_frame_elements
@@ -114,7 +115,7 @@ configuration = {'train': train_conll,
                  'num_epochs': 100 if not options.exemplar else 25,
                  'patience': 25,
                  'eval_after_every_epochs': 100,
-                 'dev_eval_epoch_frequency': 5}
+                 'dev_eval_epoch_frequency': 50 if options.exemplar else 5}
 configuration_file = os.path.join(model_dir, 'configuration.json')
 if options.mode == "train":
     if options.config:
@@ -227,7 +228,10 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
     bw_x = b_init.transduce(reversed(emb2_x))
 
     # only using the first target position - summing them hurts :(
-    targetembs = [concatenate([fw_x[targetidx], bw_x[sentlen - targetidx - 1]]) for targetidx in targetpositions]
+    try:
+        targetembs = [concatenate([fw_x[targetidx], bw_x[sentlen - targetidx - 1]]) for targetidx in targetpositions]
+    except:
+        import ipdb; ipdb.set_trace()
     targinit = tlstm.initial_state()
     target_vec = targinit.transduce(targetembs)[-1]
 
@@ -282,14 +286,25 @@ if options.mode in ["refresh"]:
 
 if options.mode in ["train", "refresh"]:
     loss = 0.0
+    devf = best_dev_f1 = 0.0
+    devtp = devfp = 0
     last_updated_epoch = 0
 
-    for epoch in xrange(NUM_EPOCHS):
+    epochs_trained = 0
+    epoch_iterator = tqdm.trange(epochs_trained,
+                                 NUM_EPOCHS,
+                                 desc="Epoch",
+                                 mininterval=10)
+
+    for epoch, _ in enumerate(epoch_iterator):
         random.shuffle(trainexamples)
-        for idx, trex in enumerate(trainexamples, 1):
-            if idx % EVAL_EVERY_EPOCH == 0:
-                trainer.status()
-                sys.stderr.write("epoch = %d.%d loss = %.6f\n" %(epoch, idx, loss/idx))
+        train_iterator = tqdm.tqdm(trainexamples,
+                              desc="Iteration")
+        trainer.status()
+        for idx, trex in enumerate(train_iterator, 1):
+            train_iterator.set_description(
+                "epoch = %d loss = %.6f val_f1 = %.4f (%.1f/%.1f) best_val_f1 = %.4f" %(
+                    epoch, loss/idx, devf, devtp, devtp + devfp, best_dev_f1))
 
             inptoks = []
             unk_replace_tokens(trex.tokens, inptoks, VOCDICT, UNK_PROB, UNKTOKEN)
@@ -320,8 +335,6 @@ if options.mode in ["train", "refresh"]:
 
                 devp, devr, devf = calc_f(corpus_result)
                 devtp, devfp, devfn = corpus_result
-                sys.stderr.write("[dev epoch=%d.%d] loss = %.6f f1 = %.4f (%.1f/%.1f)"
-                                 % (epoch, idx, devloss/devtagged, devf, devtp, devtp + devfp))
                 if devf > best_dev_f1:
                     best_dev_f1 = devf
                     with open(os.path.join(model_dir, "best-dev-f1.txt"), "w") as fout:
@@ -329,11 +342,11 @@ if options.mode in ["train", "refresh"]:
                         fout.close()
 
                     print_as_conll(devexamples, predictions)
-                    sys.stderr.write(" -- saving to {}".format(model_file_name))
                     model.save(model_file_name)
                     last_updated_epoch = epoch
                 sys.stderr.write("\n")
         if epoch - last_updated_epoch > PATIENCE:
+            sys.stderr.write("Best model with F1 = {} saved to {}\n".format(best_dev_f1, model_file_name))
             sys.stderr.write("Ran out of patience, ending training.\n")
             break
         loss = 0.0

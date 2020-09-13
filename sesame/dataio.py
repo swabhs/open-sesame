@@ -3,13 +3,14 @@ import codecs
 import os
 import sys
 import tarfile
+import tqdm
 import xml.etree.ElementTree as et
 
 from nltk.corpus import BracketParseCorpusReader
 
-from conll09 import *
-from globalconfig import *
-from sentence import *
+from conll09 import CLABELDICT, VOCDICT, POSDICT, FRAMEDICT, FEDICT, LUDICT, LUPOSDICT, CoNLL09Element, CoNLL09Example
+from globalconfig import CONSTIT_MAP, EMPTY_LABEL, LU_INDEX, FRAME_DIR, EMBEDDINGS_FILE, FRAME_REL_FILE, PTB_DATA_DIR, PARSER_DATA_DIR
+from sentence import Sentence
 
 
 def read_conll(conll_file, syn_type=None):
@@ -31,7 +32,7 @@ def read_conll(conll_file, syn_type=None):
     next_ex = 0
     with codecs.open(conll_file, "r", "utf-8") as cf:
         snum = -1
-        for l in cf:
+        for l in tqdm.tqdm(cf):
             l = l.strip()
             if l == "":
                 if elements[0].sent_num != snum:
@@ -197,7 +198,7 @@ def read_frame_maps():
     maxfesforframe = 0
     longestframe = None
 
-    for f in os.listdir(FRAME_DIR):
+    for f in tqdm.tqdm(os.listdir(FRAME_DIR)):
         framef = os.path.join(FRAME_DIR, f)
         if framef.endswith("xsl"):
             continue
@@ -229,7 +230,7 @@ def read_related_lus():
     max_lus = 0
     longestfrm = None
 
-    for f in os.listdir(FRAME_DIR):
+    for f in tqdm.tqdm(os.listdir(FRAME_DIR)):
         framef = os.path.join(FRAME_DIR, f)
         if framef.endswith("xsl"):
             continue

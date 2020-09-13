@@ -12,6 +12,7 @@ This project is developed using Python 2.7. Other requirements include the [DyNe
 $ pip install dynet
 $ pip install nltk==3.3
 $ python -m nltk.downloader averaged_perceptron_tagger wordnet
+$ pip install tqdm
 ```
 
 ## Data Preprocessing

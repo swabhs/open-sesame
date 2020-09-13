@@ -7,6 +7,7 @@ import os.path
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
+import tqdm
 import xml.etree.ElementTree as et
 from optparse import OptionParser
 
@@ -20,7 +21,7 @@ optpr.add_option("--filter_embeddings", action="store_true", default=False)
 optpr.add_option("--exemplar", action="store_true", default=False)
 (options, args) = optpr.parse_args()
 
-logger = open(f"preprocess-fn{}.log".format(VERSION), "w")
+logger = open("preprocess-fn{}.log".format(VERSION), "w")
 
 trainf = TRAIN_EXEMPLAR
 ftetrainf = TRAIN_FTE
@@ -194,7 +195,7 @@ def get_annoids(filelist, outf, outsentf):
     sents = set([])
     isfirstsentex = True
 
-    for tfname in filelist:
+    for tfname in tqdm.tqdm(filelist):
         tfname = os.path.join(FULLTEXT_DIR, tfname)
         logger.write("\n" + tfname + "\n")
         if not os.path.isfile(tfname):
@@ -266,7 +267,7 @@ def process_fulltext():
     return dev_annos, test_annos
 
 
-def process_lu_xml(lufname, dev_annos, test_annos):
+def process_lu_xml(lufname, all_exemplars, dev_annos, test_annos):
     global totsents, numsentsreused, fspno, numlus, isfirst, isfirstsent
     with codecs.open(lufname, 'rb', 'utf-8') as xml_file:
         tree = et.parse(xml_file)
@@ -281,7 +282,7 @@ def process_lu_xml(lufname, dev_annos, test_annos):
     for sent in root.iter('{http://framenet.icsi.berkeley.edu}sentence'):
         sentno += 1
         # get the tokenization and pos tags for a sentence
-        sent_id = sent.attrib["ID"]
+        sent_id = int(sent.attrib["ID"])
         logger.write("sentence:\t" + str(sent_id) + "\n")
 
         sentann = process_sent(sent, trainsentf, isfirstsent)
@@ -297,9 +298,11 @@ def process_lu_xml(lufname, dev_annos, test_annos):
             if anno_id in test_annos or anno_id in dev_annos:
                 continue
             else:
-                write_to_conll(trainf, fsps[anno_id], isfirst, sentno)
+                if sent_id in all_exemplars:
+                    all_exemplars[sent_id].append(fsps[anno_id])
+                else:
+                    all_exemplars[sent_id] = [fsps[anno_id]]
                 sizes[trainf] += 1
-                isfirst = False
 
         if numannosets > 2:
             numsentsreused += (numannosets - 2)
@@ -309,6 +312,7 @@ def process_lu_xml(lufname, dev_annos, test_annos):
     logger.write(lufname + ": total sents = " + str(sentno) + "\n")
     totsents += sentno
 
+    return all_exemplars
 
 def process_exemplars(dev_annos, test_annos):
     global totsents, numsentsreused, fspno, numlus, isfirst
@@ -322,22 +326,30 @@ def process_exemplars(dev_annos, test_annos):
     sys.stderr.write("\nReading exemplar data from " + str(len(all_lus)) + " LU files...\n")
 
     logger.write("\n\nTRAIN EXEMPLAR\n\n")
-    for i, luname in enumerate(sorted(all_lus), 1):
-        if i % 1000 == 0:
-            sys.stderr.write(str(i) + "...")
-        if not os.path.isfile(luname):
-            logger.write("\t\tIssue: Couldn't find " + luname + " - strange, terminating!\n")
-            break
-        process_lu_xml(luname, dev_annos, test_annos)
 
-    sys.stderr.write("\n\n# total LU sents = " + str(totsents) + "\n")
-    sys.stderr.write("# total LU FSPs = " + str(fspno) + "\n")
-    sys.stderr.write("# total LU files = " + str(numlus) + "\n")
-    sys.stderr.write("average # FSPs per LU = " + str(fspno / numlus) + "\n")
-    sys.stderr.write("# LU sents reused for multiple annotations = " + str(numsentsreused) + "\n")
+    all_exemplars = {}
+    for luname in tqdm.tqdm(sorted(all_lus)):
+        if not os.path.isfile(luname):
+            logger.write("\t\tIssue: Couldn't find %s - strange, terminating!\n" %(luname))
+            break
+        all_exemplars = process_lu_xml(luname, all_exemplars, dev_annos, test_annos)
+
+    total_exemplars = sum([len(x) for x in all_exemplars.values()])
+    sys.stderr.write("\nWriting %d exemplars to %s ...\n" % (total_exemplars, trainf))
+    isfirst = True
+    for write_id, sentid in enumerate(sorted(all_exemplars), 1):
+        for fsp_ in all_exemplars[sentid]:
+            write_to_conll(trainf, fsp_, isfirst, sentid=write_id)
+            isfirst = False
+
+    sys.stderr.write("\n\n# total LU sents = %d \n" %(totsents))
+    sys.stderr.write("# total LU FSPs = %d \n"  %(fspno))
+    sys.stderr.write("# total LU files = %d \n" %(numlus))
+    sys.stderr.write("average # FSPs per LU = %.3f \n" %(fspno / numlus))
+    sys.stderr.write("# LU sents reused for multiple annotations = %d \n" % (numsentsreused))
     sys.stderr.write("\noutput file sizes:\n")
     for s in sizes:
-        sys.stderr.write(s + ":\t" + str(sizes[s]) + "\n")
+        sys.stderr.write("%s :\t %d \n" %(s, sizes[s]))
     sys.stderr.write("\n")
 
 
