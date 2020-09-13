@@ -208,7 +208,7 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
     pos_x = [p_x[pos] for pos in postags]
 
     emb2_xi = []
-    for i in xrange(sentlen + 1):
+    for i in range(sentlen + 1):
         if tokens[i] in pretrained_embeddings_map:
             # If update set to False, prevents pretrained embeddings from being updated.
             emb_without_backprop = lookup(e_x, tokens[i], update=True)
@@ -217,7 +217,7 @@ def identify_frames(builders, tokens, postags, lexunit, targetpositions, goldfra
             features_at_i = concatenate([emb_x[i], pos_x[i], u_x])
         emb2_xi.append(w_e * features_at_i + b_e)
 
-    emb2_x = [rectify(emb2_xi[i]) for i in xrange(sentlen+1)]
+    emb2_x = [rectify(emb2_xi[i]) for i in range(sentlen+1)]
 
     # initializing the two LSTMs
     if USE_DROPOUT and trainmode:

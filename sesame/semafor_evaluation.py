@@ -99,7 +99,7 @@ def detail_read_fe_file(fefile):
                 raise Exception("frame already present!!!", fields[3], tfdict[(fields[5], fields[3])])
             else:
                 fes = {}
-                for x in xrange(8, len(fields), 2):
+                for x in range(8, len(fields), 2):
                     fefield, fespan = fields[x:x + 2]
                     if fefield in fes:
                         print "discontinous FEs found in ", fields[2:]

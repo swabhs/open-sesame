@@ -85,8 +85,8 @@ def write_tab_separated(sents, frames, tfdict1, sent1):
     '''
     with codecs.open("roth"+str(len(sents)), "w", "utf-8") as outf:
 
-        for i in xrange(len(sents)):
-            for j in xrange(len(sents[i])):
+        for i in range(len(sents)):
+            for j in range(len(sents[i])):
                 outf.write(str(j+1) + "\t")
                 outf.write(sents[i][j] + "\t")
                 if i in frames and j in frames[i]:
@@ -96,7 +96,7 @@ def write_tab_separated(sents, frames, tfdict1, sent1):
                 outf.write("\n")
             outf.write("\n")
             if i == sent1:
-                for j in xrange(len(sents[i])):
+                for j in range(len(sents[i])):
                     outf.write(str(j+1) + "\t")
                     outf.write(sents[i][j] + "\t")
                     if j in tfdict1:

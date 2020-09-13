@@ -153,7 +153,7 @@ class CoNLL09Example(FrameSemParse):
                         rolelabels[argspan[0]] = INDEX_BIO_DICT[SINGULAR] + "-" + felabel
                     else:
                         rolelabels[argspan[0]] = INDEX_BIO_DICT[BEGINNING] + "-" + felabel
-                    for position in xrange(argspan[0] + 1, argspan[1] + 1):
+                    for position in range(argspan[0] + 1, argspan[1] + 1):
                         rolelabels[position] = INDEX_BIO_DICT[INSIDE] + "-" + felabel
 
             for e, role in zip(self._elements, rolelabels):
@@ -166,7 +166,7 @@ class CoNLL09Example(FrameSemParse):
         Get new CoNLL string, after substituting predicted frame.
         """
         new_conll_str = ""
-        for e in xrange(len(self._elements)):
+        for e in range(len(self._elements)):
             field = deepcopy(self._elements[e])
             if (field.id - 1) in predicted_frame:
                 field.is_pred = True
@@ -186,7 +186,7 @@ class CoNLL09Example(FrameSemParse):
         Get new CoNLL string, after substituting predicted target.
         """
         new_conll_str = ""
-        for e in xrange(len(self._elements)):
+        for e in range(len(self._elements)):
             field = deepcopy(self._elements[e])
             if (field.id - 1) == predicted_target:
                 field.is_pred = True
@@ -207,7 +207,7 @@ class CoNLL09Example(FrameSemParse):
 
     def print_internal_sent(self, logger):
         logger.write("tokens and depparse:\n")
-        for x in xrange(len(self.tokens)):
+        for x in range(len(self.tokens)):
             logger.write(VOCDICT.getstr(self.tokens[x]) + " ")
         logger.write("\n")
 
@@ -234,7 +234,7 @@ class CoNLL09Example(FrameSemParse):
                 continue
             for span in self.invertedfes[fepos]:
                 logger.write(FEDICT.getstr(fepos) + "\t")
-                for s in xrange(span[0], span[1] + 1):
+                for s in range(span[0], span[1] + 1):
                     logger.write(VOCDICT.getstr(self.tokens[s]) + " ")
                 logger.write("\n")
         logger.write("\n")
@@ -245,7 +245,7 @@ class CoNLL09Example(FrameSemParse):
                 continue
             for span in parse[fepos]:
                 logger.write(FEDICT.getstr(fepos) + "\t")
-                for s in xrange(span[0], span[1] + 1):
+                for s in range(span[0], span[1] + 1):
                     logger.write(VOCDICT.getstr(self.tokens[s]) + " ")
                 logger.write("\n")
         logger.write("\n")
