@@ -6,13 +6,12 @@ A frame-semantic parser for automatically detecting [FrameNet](https://framenet.
 
 ## Installation
 
-This project is developed using Python 2.7. Other requirements include the [DyNet](http://dynet.readthedocs.io/en/latest/python.html) library, and some packages from an older version of [NLTK](https://www.nltk.org/).
+This project is built on the [DyNet](http://dynet.readthedocs.io/en/latest/python.html) library, and some packages from an older version of [NLTK](https://www.nltk.org/). The current version only supports Python 3.7.
 
 ```sh
 $ pip install dynet
-$ pip install nltk==3.3
+$ pip install nltk
 $ python -m nltk.downloader averaged_perceptron_tagger wordnet
-$ pip install tqdm
 ```
 
 ## Data Preprocessing
@@ -27,17 +26,17 @@ $ git clone https://github.com/swabhs/open-sesame.git
 $ cd open-sesame/
  ```
 
-1. Create a `data/` directory under the root directory, download [FrameNet version 1.7](https://drive.google.com/open?id=1s4SDt_yDhT8qFs1MZJbeFf-XeiNPNnx7), and extract  under `data/fndata-1.7/`.
+1. Create a directory for the data, `$DATA`, containing the (extracted) [FrameNet version 1.7](https://drive.google.com/open?id=1s4SDt_yDhT8qFs1MZJbeFf-XeiNPNnx7) data. This should be under `$DATA/fndata-1.7/`.
 
-2. Second, this project uses pretrained [GloVe word embeddings](https://nlp.stanford.edu/projects/glove/) of 100 dimensions, trained on 6B tokens. [Download](http://nlp.stanford.edu/data/glove.6B.zip) and extract under `data/`.
+2. Second, this project uses pretrained [GloVe word embeddings](https://nlp.stanford.edu/projects/glove/) of 100 dimensions, trained on 6B tokens. [Download](http://nlp.stanford.edu/data/glove.6B.100d.zip) and extract under `$DATA/embeddings_glove/`.
 
-3. Optionally, make alterations to the configurations in `configurations/global_config.json`, if you have decided to either use a different version of FrameNet, or different pretrained embeddings, etc.
+3. Optionally, make alterations to the configurations in `configurations/global_config.json`, if you have decided to either use a different version of FrameNet, or different pretrained embeddings, and so on.
 
 4. In this repository, data is formatted in a [format similar to CoNLL 2009](https://ufal.mff.cuni.cz/conll2009-st/task-description.html), but with BIO tags, for ease of reading, compared to the original XML format. See sample CoNLL formatting [here](https://github.com/swabhs/open-sesame/blob/master/sample.fn1.7.train.conll). Preprocess the data by executing:
 ```sh
 $ python -m sesame.preprocess
 ```
-The above script writes the train, dev and test files in the required format into the `data/neural/fn1.7/` directory. A large fraction of the annotations are either incomplete, or inconsistent. Such annotations are discarded, but logged under `preprocess-fn1.7.log`, along with the respective error messages.
+The above script writes the train, dev and test files in the required format into the `data/neural/fn1.7/` directory. A large fraction of the annotations are either incomplete, or inconsistent. Such annotations are discarded, but logged under `preprocess-fn1.7.log`, along with the respective error messages. To include exemplars, use the option ```--exemplar``` with the above command.
 
 
 ## Training
@@ -81,19 +80,19 @@ The output, in a CoNLL 2009-like format will be written to `logs/$MODEL_NAME/pre
 
 `$MODEL = targetid`
 
-A bidirectional LSTM model takes into account the lexical unit index in FrameNet to identify targets. This model has *not* been described in the [paper](https://arxiv.org/abs/1706.09528).
+A bidirectional LSTM model takes into account the lexical unit index in FrameNet to identify targets. This model has *not* been described in the [paper](https://arxiv.org/abs/1706.09528). Moreover, FN 1.7 exemplars cannot be used for target identification.
 
 ### 2. Frame Identification
 
 `$MODEL = frameid`
 
-Frame identification is based on a bidirectional LSTM model. Targets and their respective lexical units need to be identified before this step. At test time, example-wise analysis is logged in the model directory.
+Frame identification is based on a bidirectional LSTM model. Targets and their respective lexical units need to be identified before this step. At test time, example-wise analysis is logged in the model directory. Exemplars can be used for frame identification using the ```--exemplar``` flag during training.
 
 ### 3. Argument (Frame-Element) Identification
 
 `$MODEL = argid`
 
-Argument identification is based on a segmental recurrent neural net, used as the *baseline* in the [paper](https://arxiv.org/abs/1706.09528). Targets and their respective lexical units need to be identified, and frames corresponding to the LUs predicted before this step. At test time, example-wise analysis is logged in the model directory.
+Argument identification is based on a segmental recurrent neural net, used as the *baseline* in the [paper](https://arxiv.org/abs/1706.09528). Targets and their respective lexical units need to be identified, and frames corresponding to the LUs predicted before this step. At test time, example-wise analysis is logged in the model directory. Exemplars can be used for argument identification using the ```--exemplar``` flag during training.
 
 ## Prediction on unannotated data
 

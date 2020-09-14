@@ -78,7 +78,7 @@ def write_to_conll(outf, fsp, firstex, sentid):
             outf.write(str(i + 1) + "\t")  # ID = 0
             outf.write(str(token.encode('utf-8')) + "\t")  # FORM = 1
             outf.write("_\t" + nltklemma + "\t")  # LEMMA PLEMMA = 2,3
-            outf.write(postag + "\t" + nltkpostag + "\t") . # POS PPOS = 4,5
+            outf.write(postag + "\t" + nltkpostag + "\t")  # POS PPOS = 4,5
             outf.write(str(sentid - 1) + "\t_\t")  # FEAT PFEAT = 6,7 ~ replacing FEAT with sentence number
             outf.write("_\t_\t")  # HEAD PHEAD = 8,9
             outf.write("_\t_\t")  # DEPREL PDEPREL = 10,11
