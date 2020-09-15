@@ -86,7 +86,7 @@ A bidirectional LSTM model takes into account the lexical unit index in FrameNet
 
 `$MODEL = frameid`
 
-Frame identification is based on a bidirectional LSTM model. Targets and their respective lexical units need to be identified before this step. At test time, example-wise analysis is logged in the model directory. Exemplars can be used for frame identification using the ```--exemplar``` flag during training.
+Frame identification is based on a bidirectional LSTM model. Targets and their respective lexical units need to be identified before this step. At test time, example-wise analysis is logged in the model directory. Exemplars can be used for frame identification using the ```--exemplar``` flag during training, but do not help (in fact reduce performance to 88.17).
 
 ### 3. Argument (Frame-Element) Identification
 
