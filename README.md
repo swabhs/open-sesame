@@ -6,7 +6,7 @@ A frame-semantic parser for automatically detecting [FrameNet](https://framenet.
 
 ## Installation
 
-This project is built on python==3.7.9 and the [DyNet](http://dynet.readthedocs.io/en/latest/python.html) library (dynet might be compatible only with cython==0.29.12). Additionally, it uses some packages from [NLTK](https://www.nltk.org/). 
+This project is built on python==3.7.9 and the [DyNet](http://dynet.readthedocs.io/en/latest/python.html) library. Additionally, it uses some packages from [NLTK](https://www.nltk.org/). 
 
 ```sh
 $ pip install dynet==2.0.3
