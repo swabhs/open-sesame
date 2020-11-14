@@ -24,6 +24,7 @@ VERSION = str(configuration["version"])
 DATA_DIR = configuration["data_directory"]
 EMBEDDINGS_FILE = configuration["embeddings_file"]
 DEBUG_MODE = configuration["debug_mode"]
+ARGID_LR = configuration["argid_lr"]
 
 # The following variables are held constant throughout the repository. Change at your own peril!
 

@@ -30,7 +30,7 @@ from optparse import OptionParser
 from .conll09 import VOCDICT, FRAMEDICT, FEDICT, LUDICT, LUPOSDICT, DEPRELDICT, CLABELDICT, POSDICT, LEMDICT, lock_dicts, post_train_lock_dicts
 from .dataio import read_conll, get_wvec_map, read_ptb, read_frame_maps, read_frame_relations
 from .evaluation import calc_f, evaluate_example_argid, evaluate_corpus_argid
-from .globalconfig import VERSION, TRAIN_EXEMPLAR, TRAIN_FTE, TRAIN_FTE_CONSTITS, UNK, EMPTY_LABEL, EMPTY_FE, TEST_CONLL, DEV_CONLL
+from .globalconfig import VERSION, TRAIN_EXEMPLAR, TRAIN_FTE, TRAIN_FTE_CONSTITS, UNK, EMPTY_LABEL, EMPTY_FE, TEST_CONLL, DEV_CONLL, ARGID_LR
 from .housekeeping import Factor, filter_long_ex, unk_replace_tokens
 from .discrete_argid_feats import ArgPosition, OutHeads, SpanWidth
 from .raw_data import make_data_instance
@@ -261,7 +261,7 @@ print_data_status(DEPRELDICT, "Dependency Relations")
 sys.stderr.write("\n_____________________\n\n")
 
 model = dy.Model()
-adam = dy.AdamTrainer(model, 0.0005, 0.01, 0.9999, 1e-8)
+adam = dy.AdamTrainer(model, ARGID_LR, 0.01, 0.9999, 1e-8)
 
 v_x = model.add_lookup_parameters((VOCDICT.size(), TOKDIM))
 p_x = model.add_lookup_parameters((POSDICT.size(), POSDIM))
@@ -1083,3 +1083,4 @@ elif options.mode == "predict":
     sys.stderr.write("Printing output in CoNLL format to {}\n".format(out_conll_file))
     print_as_conll(instances, predictions)
     sys.stderr.write("Done!\n")
+
