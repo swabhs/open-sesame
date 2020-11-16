@@ -2,5 +2,6 @@
     "version": 1.7,
     "data_directory": "data/",
     "embeddings_file": "data/glove.6B.100d.txt",
+    "argid_lr": 0.0005,
     "debug_mode": false
 }
