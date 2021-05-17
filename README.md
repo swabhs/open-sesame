@@ -26,9 +26,9 @@ $ git clone https://github.com/swabhs/open-sesame.git
 $ cd open-sesame/
  ```
 
-1. Create a directory for the data, `$DATA`, containing the (extracted) [FrameNet version 1.7](https://drive.google.com/open?id=1s4SDt_yDhT8qFs1MZJbeFf-XeiNPNnx7) data. This should be under `$DATA/fndata-1.7/`.
+1. Create a directory for the data containing the (extracted) [FrameNet version 1.7](https://drive.google.com/open?id=1s4SDt_yDhT8qFs1MZJbeFf-XeiNPNnx7) data. This should be under `<DATADIR>/fndata-1.7/`. By default, `<DATADIR>` is a directory called `data` directly under `open-sesame`'s root directory; to change this, alter the `data_directory` and `embeddings_file` values in `configurations/global_config.json`.
 
-2. Second, this project uses pretrained [GloVe word embeddings](https://nlp.stanford.edu/projects/glove/) of 100 dimensions, trained on 6B tokens. [Download](http://nlp.stanford.edu/data/glove.6B.100d.zip) and extract under `$DATA/embeddings_glove/`.
+2. Second, this project uses pretrained [GloVe word embeddings](https://nlp.stanford.edu/projects/glove/) of 100 dimensions, trained on 6B tokens. [Download](http://nlp.stanford.edu/data/glove.6B.100d.zip) and extract under `<DATADIR>/embeddings_glove/`.
 
 3. Optionally, make alterations to the configurations in `configurations/global_config.json`, if you have decided to either use a different version of FrameNet, or different pretrained embeddings, and so on.
 
